@@ -1,1 +1,2 @@
-# barter_app
+# Item-exchange-app
+AI and Blockchain Powered Barter App
