@@ -299,6 +299,12 @@ let desiredQuery = $state('');
 					role="button"
 					tabindex="0"
 					onclick={() => handleItemClick(item)}
+					onkeydown={(event) => {
+						if (event.key === 'Enter' || event.key === ' ') {
+							event.preventDefault();
+							handleItemClick(item);
+						}
+					}}
 				>
 					<!-- Item Image -->
 					<div class="relative bg-gray-200 overflow-hidden">
@@ -340,11 +346,16 @@ let desiredQuery = $state('');
 
 						<div class="pt-3 border-t border-gray-100">
 							<div class="flex items-center justify-between mb-3">
-								<div 
-									class="flex items-center cursor-pointer hover:text-red-600 transition-colors"
-									onclick={(e) => handleContactOwner(item, e)}
-									role="button"
-									tabindex="0"
+								<button
+									type="button"
+									class="flex items-center cursor-pointer hover:text-red-600 transition-colors focus:outline-none"
+									onclick={(e) => {
+										e.stopPropagation();
+										if (item.owner?.id) {
+											goto(`/user/${item.owner.id}`);
+										}
+									}}
+									aria-label={`View ${item.owner?.name || 'user'} profile`}
 								>
 									<div class="w-6 h-6 bg-gradient-to-br from-red-500 to-red-600 rounded-full mr-2 flex items-center justify-center">
 										<span class="text-xs text-white font-medium">
@@ -352,7 +363,7 @@ let desiredQuery = $state('');
 										</span>
 									</div>
 									<span class="text-sm text-gray-600 font-medium hover:text-red-600">{item.owner?.name || 'User'}</span>
-								</div>
+								</button>
 							</div>
 							
 							<!-- Action Buttons -->

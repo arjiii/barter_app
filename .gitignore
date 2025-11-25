@@ -1,0 +1,7 @@
+# Virtual environment
+# The standard virtual environment name
+venv/
+# Common alternative virtual environment names
+.venv/
+env/
+.env/

@@ -278,7 +278,7 @@
 						type="button"
 						disabled={isStartingChat || !currentUser || currentUser.id === profileUser.id}
 						onclick={handleMessageUser}
-						class="inline-flex items-center gap-2 rounded-xl bg-white bg-opacity-15 px-5 py-3 font-semibold text-white shadow-lg shadow-red-900/20 transition hover:bg-white hover:text-red-600 disabled:cursor-not-allowed disabled:opacity-60"
+						class="inline-flex items-center gap-2 rounded-xl bg-white bg-opacity-15 px-5 py-3 font-semibold text-gray-600 shadow-lg shadow-red-900/20 transition hover:bg-white hover:text-red-600 disabled:cursor-not-allowed disabled:opacity-60"
 					>
 						{#if isStartingChat}
 							<svg class="h-5 w-5 animate-spin text-current" viewBox="0 0 24 24" fill="none" stroke="currentColor">
