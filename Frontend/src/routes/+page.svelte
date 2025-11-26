@@ -1,424 +1,804 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
-	import { onMount } from 'svelte';
-	import type { LoginCredentials, SignUpCredentials, FormState, ValidationErrors } from '$lib/types/auth';
-	import { authService } from '$lib/services/authService';
-	import { authStore } from '$lib/stores/authStore';
-	import { 
-		validateLoginCredentials, 
-		validateSignUpCredentials, 
-		hasValidationErrors 
-	} from '$lib/utils/validation';
 
-	// Form state
-	let formState = $state<FormState>({
-		isSignUp: false,
-		isLoading: false,
-		errors: {}
-	});
+	type Stat = { label: string; value: string; subtext?: string };
+	type Feature = { title: string; description: string; icon: string; badge?: string };
+	type Step = { title: string; body: string; action: string };
+	type Testimonial = { quote: string; author: string; role: string };
+	type Faq = { question: string; answer: string };
+	type RevealConfig = {
+		threshold?: number;
+		once?: boolean;
+		delay?: number;
+		rootMargin?: string;
+	};
 
-	// Form data - use any type to handle both login and signup
-	let formData = $state<any>({
-		email: '',
-		password: '',
-		rememberMe: false
-	});
+	const stats: Stat[] = [
+		{ label: 'Neighbors trading', value: '12,480+', subtext: 'verified barangay members' },
+		{ label: 'Trades completed', value: '31,600+', subtext: 'settled on-chain' },
+		{ label: 'Carbon saved', value: '486 tons', subtext: 'by reusing goods' }
+	];
 
-	// UI state
-	let showPassword = $state(false);
-	let showConfirmPassword = $state(false);
+	const heroHighlights = [
+		'Barangay-verified profiles',
+		'Smart-contract escrow',
+		'Disaster response ready'
+	];
 
-	// Reactive form data based on mode
-	$effect(() => {
-		if (formState.isSignUp) {
-			formData = {
-				name: '',
-				email: '',
-				password: '',
-				confirmPassword: ''
-			};
+	const features: Feature[] = [
+		{
+			title: 'Trust built-in',
+			description:
+				'Barangay ID validation, dispute resolution, and transparent history give every swap a trusted paper trail.',
+			icon: 'M5 13l4 4L19 7',
+			badge: 'Security'
+		},
+		{
+			title: 'Local-first discovery',
+			description:
+				'Pin drops, category filters, and topic hubs make it simple to find neighbors with exactly what you need.',
+			icon: 'M12 2C8.134 2 5 5.134 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.866-3.134-7-7-7z'
+		},
+		{
+			title: 'Fair-value trades',
+			description:
+				'AI-powered suggestions and multi-item offers make swapping bikes for surf lessons (and more) feel effortless.',
+			icon: 'M4 7h16M4 12h16M4 17h16',
+			badge: 'New'
+		},
+		{
+			title: 'Messaging that matters',
+			description:
+				'Context-aware chat, embedded item cards, and pinned agreements keep every deal tidy and transparent.',
+			icon: 'M8 10h.01M12 10h.01M16 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z'
+		},
+		{
+			title: 'Community missions',
+			description:
+				'Organize donation drives, school supply swaps, or disaster relief kits with goal trackers and broadcast updates.',
+			icon: 'M3 3h18M9 7v14m6-14v14M5 21h14',
+			badge: 'Community'
+		},
+		{
+			title: 'Smart inventory',
+			description:
+				'Auto-generated catalogs, reminders to relist, and condition tracking keep your barter shelf always ready.',
+			icon: 'M4 6h16M4 12h16M4 18h16'
+		}
+	];
+
+	const steps: Step[] = [
+		{
+			title: 'List or request',
+			body: 'Snap a photo, add condition, tag your barangay, and publish in under 60 seconds.',
+			action: 'Post an item'
+		},
+		{
+			title: 'Match & message',
+			body: 'Browse curated feeds, send bundled offers, and chat with real neighbors using secured identities.',
+			action: 'Start a trade'
+		},
+		{
+			title: 'Swap with confidence',
+			body: 'Meet at a SafeSwap zone or request doorstep pickup. Smart-contract receipts back every deal.',
+			action: 'Confirm exchange'
+		}
+	];
+
+	const testimonials: Testimonial[] = [
+		{
+			quote:
+				'We mobilized 400+ emergency kits in 48 hours after the typhoon. Bayanihan Exchange gave our barangay an instant command center.',
+			author: 'Kapitan Liza Mendoza',
+			role: 'Barangay 271 | Manila'
+		},
+		{
+			quote:
+				'The trust badges and escrow made it easy to swap my camera gear for a laptop. Zero awkward haggling, 100% community vibes.',
+			author: 'Ronnie Magno',
+			role: 'Freelance Designer | Cebu'
+		},
+		{
+			quote:
+				'We outfitted an entire classroom with reused desks from neighbors. The sustainability stats kept donors engaged.',
+			author: 'Teacher Mae Alvarez',
+			role: 'Public School 19 | Iloilo'
+		}
+	];
+
+	const faqs: Faq[] = [
+		{
+			question: 'How do I join the barter community?',
+			answer:
+				'Tap “Get started”, complete barangay verification, and you can publish your first listing or request immediately.'
+		},
+		{
+			question: 'Is every trade secured on blockchain?',
+			answer:
+				'Yes. Smart-contract receipts provide immutable proof of value, conditions, and mutual acceptance for every approved trade.'
+		},
+		{
+			question: 'Can I barter services and time?',
+			answer:
+				'Absolutely. Create offers for lessons, repairs, rides, or volunteering hours and pair them with goods if needed.'
+		},
+		{
+			question: 'What if something goes wrong?',
+			answer:
+				'Community mediators and barangay admins can review the on-chain record, pause disputed trades, and issue resolutions.'
+		}
+	];
+
+	const partnerLogos = ['Community Dev Office', 'Smart Impact Lab', 'UNDP Accelerator', 'PH Resilience Hub'];
+
+	const handleCta = (path: string) => goto(path);
+
+	const reveal = (node: HTMLElement, config: RevealConfig = {}) => {
+		const { threshold = 0.2, once = false, delay = 0, rootMargin = '0px' } = config;
+
+		const applyVisible = () => {
+			node.style.transitionDelay = `${delay}ms`;
+			node.classList.add('reveal-visible');
+			node.classList.remove('reveal-hidden');
+		};
+
+		const applyHidden = () => {
+			node.classList.add('reveal-hidden');
+			node.classList.remove('reveal-visible');
+		};
+
+		let observer: IntersectionObserver | null = null;
+		const isBrowser = typeof window !== 'undefined';
+		const prefersReducedMotion = isBrowser
+			? window.matchMedia('(prefers-reduced-motion: reduce)').matches
+			: false;
+
+		if (!prefersReducedMotion && isBrowser) {
+			applyHidden();
+			observer = new IntersectionObserver(
+				(entries) => {
+					entries.forEach((entry) => {
+						if (entry.isIntersecting) {
+							applyVisible();
+							if (once && observer) {
+								observer.unobserve(node);
+							}
+						} else if (!once) {
+							applyHidden();
+						}
+					});
+				},
+				{ threshold, rootMargin }
+			);
+
+			observer.observe(node);
 		} else {
-			formData = {
-				email: '',
-				password: '',
-				rememberMe: false
-			};
+			applyVisible();
 		}
-	});
 
-	/**
-	 * Toggle between sign in and sign up modes
-	 */
-	function toggleMode(): void {
-		formState.isSignUp = !formState.isSignUp;
-		formState.errors = {};
-	}
-
-	/**
-	 * Handle form submission
-	 */
-	async function handleSubmit(event: Event): Promise<void> {
-		event.preventDefault();
-		formState.isLoading = true;
-		formState.errors = {};
-
-		try {
-			let validationErrors: ValidationErrors = {};
-
-			// Validate form data
-			if (formState.isSignUp) {
-				validationErrors = validateSignUpCredentials(formData as SignUpCredentials);
-			} else {
-				validationErrors = validateLoginCredentials(formData as LoginCredentials);
+		return {
+			destroy() {
+				if (observer) {
+					observer.disconnect();
+				}
 			}
-
-			// Check for validation errors
-			if (hasValidationErrors(validationErrors)) {
-				formState.errors = validationErrors;
-				return;
-			}
-
-			// Call authentication service
-			const response = formState.isSignUp 
-				? await authService.signUp(formData as SignUpCredentials)
-				: await authService.signIn(formData as LoginCredentials);
-
-			if (response.success && response.user) {
-				// Update auth store
-				authStore.setUser(response.user);
-				
-				// Redirect to dashboard
-				await goto('/discovery');
-			} else {
-				// Handle authentication errors
-				formState.errors = {
-					general: response.message || 'Authentication failed'
-				};
-			}
-		} catch (error) {
-			console.error('Authentication error:', error);
-			formState.errors = {
-				general: 'An unexpected error occurred. Please try again.'
-			};
-		} finally {
-			formState.isLoading = false;
-		}
-	}
-
-	/**
-	 * Handle social login
-	 */
-	async function handleSocialLogin(provider: 'google' | 'apple' | 'facebook'): Promise<void> {
-		try {
-			formState.isLoading = true;
-			// Implement social login logic here
-			console.log(`Social login with ${provider}`);
-			// For now, just show a message
-			alert(`${provider} login not implemented yet`);
-		} catch (error) {
-			console.error('Social login error:', error);
-		} finally {
-			formState.isLoading = false;
-		}
-	}
-
-	onMount(() => {
-		// Initialize auth state
-		authStore.initializeAuth();
-	});
+		};
+	};
 </script>
 
-<div class="min-h-screen bg-red-600 flex">
-	<!-- Left Side - Welcome Section -->
-	<div class="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-red-500 to-red-700 flex-col justify-center px-12 text-white">
-		<!-- Logo -->
-		<div class="mb-8">
-			<div class="w-12 h-12 bg-white rounded-lg flex items-center justify-center mb-4">
-				<svg class="h-8 w-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-					<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
-				</svg>
-			</div>
-			<h1 class="text-3xl font-bold">Bayanihan Exchange</h1>
-			<p class="text-red-100 text-sm">Blockchain-Powered Community Barter</p>
-		</div>
+<svelte:head>
+	<title>Bayanihan Exchange | Trade goods, skills, and hope</title>
+	<meta
+		name="description"
+		content="Organize community-led barter drives powered by blockchain trust. Swap goods, services, and skills with neighbors in seconds."
+	/>
+</svelte:head>
 
-		<!-- Welcome Content -->
-		<div class="max-w-md">
-		<h2 class="text-4xl font-bold mb-4">
-			{formState.isSignUp ? 'Join our Bayanihan Community' : 'Welcome back, Kabayan!'}
-		</h2>
-		<p class="text-lg text-red-100 mb-8">
-			{formState.isSignUp ? 'Start your journey with us and join our community of neighbors helping neighbors through blockchain-powered bartering.' : 'Continue your journey in our community where neighbors help neighbors through secure blockchain trading.'}
-		</p>
-		
-		<button 
-			type="button" 
-			onclick={toggleMode}
-			class="bg-white text-red-600 px-6 py-3 rounded-lg font-semibold hover:bg-red-50 transition-colors duration-200"
-		>
-			{formState.isSignUp ? 'Already have an account? Sign in' : 'New to Bayanihan? Sign up'}
-		</button>
+<div class="bg-slate-950 text-white">
+	<section class="relative overflow-hidden pb-24 pt-12 sm:pt-16 lg:pt-24 hero-section" use:reveal={{ threshold: 0.05 }}>
+		<div class="absolute inset-0 opacity-30 blur-3xl">
+			<div class="h-64 w-64 rounded-full bg-red-500/40 absolute -top-10 -left-16 floating-orb"></div>
+			<div class="h-72 w-72 rounded-full bg-orange-400/40 absolute top-24 right-0 floating-orb" style="animation-delay: 4s;"></div>
 		</div>
+		<div class="hero-aurora hero-aurora--one"></div>
+		<div class="hero-aurora hero-aurora--two"></div>
 
-		<!-- Illustration Area -->
-		<div class="mt-12 flex justify-center">
-			<div class="relative">
-				<!-- Rocket with person illustration -->
-				<div class="w-64 h-64 bg-gradient-to-t from-red-400 to-red-300 rounded-full flex items-end justify-center relative overflow-hidden">
-					<!-- Person on rocket -->
-					<div class="absolute bottom-8 left-1/2 transform -translate-x-1/2">
-						<!-- Person -->
-						<div class="w-16 h-20 bg-orange-400 rounded-t-full relative">
-							<!-- Head -->
-							<div class="w-8 h-8 bg-yellow-200 rounded-full absolute -top-4 left-1/2 transform -translate-x-1/2"></div>
-							<!-- Arms -->
-							<div class="w-3 h-8 bg-orange-400 rounded-full absolute -left-2 top-2 transform rotate-12"></div>
-							<div class="w-3 h-8 bg-orange-400 rounded-full absolute -right-2 top-2 transform -rotate-12"></div>
+		<div class="relative max-w-6xl mx-auto px-6 lg:px-8">
+			<header class="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
+				<div class="flex items-center gap-3">
+					<div class="h-12 w-12 rounded-2xl bg-white/10 flex items-center justify-center">
+						<svg viewBox="0 0 24 24" class="h-6 w-6 text-red-300" fill="none" stroke="currentColor">
+							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+						</svg>
+					</div>
+					<div>
+						<p class="text-xs uppercase tracking-[0.5em] text-slate-400">Bayanihan Exchange</p>
+						<p class="text-sm text-slate-300">Community barter re-imagined</p>
+					</div>
+				</div>
+
+				<nav class="flex flex-wrap gap-3 text-sm text-slate-300">
+					<a href="#features" class="hover:text-white transition">Features</a>
+					<a href="#how-it-works" class="hover:text-white transition">How it works</a>
+					<a href="#impact" class="hover:text-white transition">Impact</a>
+					<a href="#faq" class="hover:text-white transition">FAQ</a>
+				</nav>
+
+				<div class="flex items-center gap-3 text-sm">
+					<button class="px-4 py-2 rounded-full border border-white/30 hover:border-white transition" onclick={() => handleCta('/sign-in-up?mode=signin')}>
+						Sign in
+					</button>
+					<button class="px-4 py-2 rounded-full bg-red-500 hover:bg-red-400 font-semibold" onclick={() => handleCta('/sign-in-up?mode=signup')}>
+						Get started
+					</button>
+				</div>
+			</header>
+
+			<div class="mt-16 grid gap-12 lg:grid-cols-[1.1fr,0.9fr]">
+				<div class="space-y-8" use:reveal={{ threshold: 0.1 }}>
+					<div class="inline-flex items-center gap-2 rounded-full bg-white/10 px-4 py-2 text-sm text-slate-200">
+						<span class="h-2.5 w-2.5 rounded-full bg-lime-400 animate-pulse"></span>
+						Live in 132 barangays nationwide
+					</div>
+
+					<div class="space-y-6">
+						<h1 class="text-4xl font-bold leading-tight text-white sm:text-5xl lg:text-6xl animated-text">
+							Trade goods, skills, and hope—powered by blockchain trust.
+						</h1>
+						<p class="text-lg text-slate-300 max-w-2xl animated-copy">
+							Bayanihan Exchange unites neighbors, NGOs, and barangay halls in one resilient barter network.
+							Launch community drives, reroute unused goods, and track impact with transparent smart contracts.
+						</p>
+					</div>
+
+					<div class="flex flex-wrap gap-4">
+						<button class="rounded-2xl bg-red-500 px-8 py-3 text-lg font-semibold shadow-lg shadow-red-500/40 transition hover:bg-red-400 glow-button" onclick={() => handleCta('/sign-in-up?mode=signup')}>
+							Create free account
+						</button>
+						<button class="rounded-2xl border border-white/40 px-8 py-3 text-lg font-semibold text-white hover:border-white" onclick={() => handleCta('/sign-in-up?mode=signin')}>
+							Sign in to existing account
+						</button>
+						<button class="rounded-2xl border border-white/20 px-8 py-3 text-lg font-semibold text-white/80 hover:text-white" onclick={() => handleCta('/discovery')}>
+							Browse marketplace
+						</button>
+					</div>
+
+					<div class="flex flex-wrap gap-3 text-sm text-slate-300">
+						{#each heroHighlights as highlight}
+							<span class="flex items-center gap-2 rounded-full border border-white/15 px-4 py-2 pulse-pill">
+								<svg viewBox="0 0 24 24" class="h-4 w-4 text-lime-300" fill="none" stroke="currentColor">
+									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+								</svg>
+								{highlight}
+							</span>
+						{/each}
+					</div>
+				</div>
+
+				<div class="space-y-6" use:reveal={{ threshold: 0.15 }}>
+					<div class="rounded-3xl bg-white/5 p-6 backdrop-blur">
+						<div class="flex justify-between text-xs uppercase tracking-[0.3em] text-slate-400">
+							<span>Live barter board</span>
+							<span>On-chain escrow</span>
 						</div>
-						<!-- Rocket body -->
-						<div class="w-20 h-24 bg-gradient-to-t from-red-600 to-red-500 rounded-t-lg relative">
-							<!-- Rocket stripes -->
-							<div class="absolute top-4 left-0 right-0 h-2 bg-white"></div>
-							<div class="absolute top-8 left-0 right-0 h-2 bg-white"></div>
-							<!-- Rocket flames -->
-							<div class="absolute -bottom-4 left-1/2 transform -translate-x-1/2">
-								<div class="w-0 h-0 border-l-4 border-r-4 border-t-8 border-transparent border-t-yellow-300"></div>
-								<div class="w-0 h-0 border-l-3 border-r-3 border-t-6 border-transparent border-t-orange-400 absolute top-1 left-1/2 transform -translate-x-1/2"></div>
-							</div>
+
+						<div class="mt-4 space-y-4">
+							{#each [
+								{ item: 'Solar lantern x2', want: 'Rice packs', status: 'Verifying barangay IDs' },
+								{ item: 'Surf lessons (3hrs)', want: 'Mountain bike tune-up', status: 'Offer matched' },
+								{ item: 'Desktop PC set', want: 'School chairs', status: 'Escrow funded' }
+							] as trade}
+								<div class="rounded-2xl border border-white/10 bg-slate-900/60 p-4">
+									<p class="text-sm text-slate-400">{trade.status}</p>
+									<p class="mt-2 text-lg font-semibold">{trade.item}</p>
+									<p class="text-sm text-slate-300">for {trade.want}</p>
+								</div>
+							{/each}
+						</div>
+
+						<div class="mt-6 rounded-2xl bg-gradient-to-r from-red-500 to-orange-400 p-4 text-sm font-semibold text-white">
+							Barangay 87 activated a relief drive · 156 pledges secured
 						</div>
 					</div>
-					<!-- Clouds -->
-					<div class="absolute -bottom-2 -left-4 w-8 h-4 bg-white rounded-full opacity-80"></div>
-					<div class="absolute -bottom-1 -right-6 w-6 h-3 bg-white rounded-full opacity-80"></div>
-					<div class="absolute -bottom-3 left-1/2 transform -translate-x-1/2 w-10 h-5 bg-white rounded-full opacity-80"></div>
+
+					<div class="grid gap-4 sm:grid-cols-3 text-center text-sm text-slate-300">
+						{#each stats as stat}
+							<div class="rounded-2xl border border-white/10 bg-white/5 px-4 py-6">
+								<p class="text-2xl font-semibold text-white">{stat.value}</p>
+								<p class="mt-1 font-medium uppercase tracking-wide text-xs text-slate-400">{stat.label}</p>
+								{#if stat.subtext}
+									<p class="mt-1 text-slate-400">{stat.subtext}</p>
+								{/if}
+							</div>
+						{/each}
+					</div>
 				</div>
 			</div>
-		</div>
-	</div>
 
-	<!-- Right Side - Form Section -->
-	<div class="w-full lg:w-1/2 bg-white flex flex-col justify-center px-8 py-12">
-		<!-- Mobile Logo -->
-		<div class="lg:hidden mb-8 text-center">
-			<div class="w-12 h-12 bg-red-600 rounded-lg flex items-center justify-center mx-auto mb-4">
-				<svg class="h-8 w-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-					<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
-				</svg>
+			<div class="mt-16 flex flex-wrap items-center gap-4 text-xs uppercase text-slate-500">
+				<span class="text-slate-400">Partnered with</span>
+				<div class="flex flex-wrap gap-4">
+					{#each partnerLogos as partner}
+						<span class="rounded-full border border-white/10 px-4 py-2 text-slate-300">{partner}</span>
+					{/each}
+				</div>
 			</div>
-			<h1 class="text-2xl font-bold text-gray-900">Bayanihan Exchange</h1>
-			<p class="text-sm text-gray-600">Blockchain-Powered Community Barter</p>
-		</div>
 
-		<div class="max-w-md mx-auto w-full">
-			<div class="text-center mb-8">
-				<h2 class="text-2xl font-bold text-gray-900 mb-2">
-					{formState.isSignUp ? 'Create Account' : 'Sign In'}
-				</h2>
-				<p class="text-gray-600">
-					{formState.isSignUp ? 'Join the Bayanihan community today' : 'Welcome back to Bayanihan Exchange'}
+			<div class="scroll-indicator" use:reveal={{ threshold: 0.2 }}>
+				<span></span>
+				<p>Scroll to explore</p>
+			</div>
+		</div>
+	</section>
+
+	<section id="features" class="border-t border-white/5 bg-slate-900 py-20" use:reveal={{ threshold: 0.05 }}>
+		<div class="mx-auto max-w-6xl px-6 lg:px-8">
+			<div class="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+				<div>
+					<p class="text-sm uppercase tracking-[0.5em] text-red-300 animated-copy">Why Bayanihan</p>
+					<h2 class="mt-2 text-3xl font-bold text-white sm:text-4xl animated-text">Purpose-built for community barter.</h2>
+				</div>
+				<p class="text-slate-300 max-w-xl animated-copy">
+					Every capability comes from months of co-design with barangay captains, disaster response units, and grassroots entrepreneurs.
 				</p>
 			</div>
 
-			<div class="bg-white py-8 px-6 rounded-2xl shadow-lg border border-gray-100">
-				<!-- Error Message -->
-				{#if formState.errors.general}
-					<div class="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded-lg">
-						{formState.errors.general}
-					</div>
-				{/if}
-
-				<form class="space-y-6" onsubmit={handleSubmit}>
-					{#if formState.isSignUp}
-						<div>
-							<label for="name" class="block text-sm font-medium text-gray-700 mb-2">
-								Full Name
-							</label>
-							<input
-								id="name"
-								name="name"
-								type="text"
-								bind:value={formData.name}
-								class="w-full px-4 py-3 border {formState.errors.name ? 'border-red-500' : 'border-gray-300'} rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-colors"
-								placeholder="Enter your full name"
-							/>
-							{#if formState.errors.name}
-								<p class="mt-1 text-sm text-red-600">{formState.errors.name}</p>
-							{/if}
-						</div>
-					{/if}
-
-					<div>
-						<label for="email" class="block text-sm font-medium text-gray-700 mb-2">
-							Email Address
-						</label>
-						<input
-							id="email"
-							name="email"
-							type="email"
-							autocomplete="email"
-							bind:value={formData.email}
-							class="w-full px-4 py-3 border {formState.errors.email ? 'border-red-500' : 'border-gray-300'} rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-colors"
-							placeholder="Enter your email address"
-						/>
-						{#if formState.errors.email}
-							<p class="mt-1 text-sm text-red-600">{formState.errors.email}</p>
-						{/if}
-					</div>
-
-					<div>
-						<label for="password" class="block text-sm font-medium text-gray-700 mb-2">
-							Password
-						</label>
-						<div class="relative">
-							<input
-								id="password"
-								name="password"
-								type={showPassword ? 'text' : 'password'}
-								autocomplete={formState.isSignUp ? "new-password" : "current-password"}
-								bind:value={formData.password}
-								class="w-full pr-12 px-4 py-3 border {formState.errors.password ? 'border-red-500' : 'border-gray-300'} rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-colors"
-								placeholder="Password"
-							/>
-							<button type="button" class="absolute inset-y-0 right-3 my-auto text-gray-500 hover:text-gray-700" onclick={() => showPassword = !showPassword} aria-label={showPassword ? 'Hide password' : 'Show password'}>
-								{#if showPassword}
-									<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-5 0-9-4-9-7 0-1.07.41-2.205 1.125-3.3M6.2 6.2A9.967 9.967 0 0112 5c5 0 9 4 9 7 0 1.07-.41 2.205-1.125 3.3M3 3l18 18M9.88 9.88A3 3 0 0012 15a3 3 0 002.12-5.12"/></svg>
-								{:else}
-									<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.477 0 8.268 2.943 9.542 7-1.274 4.057-5.065 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
-								{/if}
-							</button>
-						</div>
-						{#if formState.errors.password}
-							<p class="mt-1 text-sm text-red-600">{formState.errors.password}</p>
-						{/if}
-					</div>
-
-					{#if formState.isSignUp}
-						<div>
-							<label for="confirm-password" class="block text-sm font-medium text-gray-700 mb-2">
-								Confirm Password
-							</label>
-							<div class="relative">
-								<input
-									id="confirm-password"
-									name="confirm-password"
-									type={showConfirmPassword ? 'text' : 'password'}
-									autocomplete="new-password"
-									bind:value={formData.confirmPassword}
-									class="w-full pr-12 px-4 py-3 border {formState.errors.confirmPassword ? 'border-red-500' : 'border-gray-300'} rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-colors"
-									placeholder="Confirm your password"
-								/>
-								<button type="button" class="absolute inset-y-0 right-3 my-auto text-gray-500 hover:text-gray-700" onclick={() => showConfirmPassword = !showConfirmPassword} aria-label={showConfirmPassword ? 'Hide password' : 'Show password'}>
-									{#if showConfirmPassword}
-										<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-5 0-9-4-9-7 0-1.07.41-2.205 1.125-3.3M6.2 6.2A9.967 9.967 0 0112 5c5 0 9 4 9 7 0 1.07-.41 2.205-1.125 3.3M3 3l18 18M9.88 9.88A3 3 0 0012 15a3 3 0 002.12-5.12"/></svg>
-									{:else}
-										<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.477 0 8.268 2.943 9.542 7-1.274 4.057-5.065 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
-									{/if}
-								</button>
-							</div>
-							{#if formState.errors.confirmPassword}
-								<p class="mt-1 text-sm text-red-600">{formState.errors.confirmPassword}</p>
-							{/if}
-						</div>
-					{/if}
-
-					{#if !formState.isSignUp}
-						<div class="flex items-center justify-between">
-							<div class="flex items-center">
-								<input
-									id="remember-me"
-									name="remember-me"
-									type="checkbox"
-									bind:checked={formData.rememberMe}
-									class="h-4 w-4 text-red-600 focus:ring-red-500 border-gray-300 rounded"
-								/>
-								<label for="remember-me" class="ml-2 block text-sm text-gray-900">
-									Remember me
-								</label>
-							</div>
-
-							<div class="text-sm">
-								<button type="button" class="font-medium text-red-600 hover:text-red-500 transition-colors">
-									Forgot Password?
-								</button>
-							</div>
-						</div>
-					{/if}
-
-					<div>
-						<button
-							type="submit"
-							disabled={formState.isLoading}
-							class="w-full bg-red-600 text-white py-3 px-4 rounded-lg font-semibold hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
-						>
-							{#if formState.isLoading}
-								<svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white inline" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-									<circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-									<path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+			<div class="mt-12 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+				{#each features as feature, index}
+					<article
+						class="rounded-3xl border border-white/5 bg-slate-950/60 p-6 shadow-inner shadow-black/30 card-hover"
+						use:reveal={{ delay: index * 60 }}
+					>
+						<div class="flex items-center gap-3">
+							<div class="rounded-2xl bg-white/5 p-3 text-red-300">
+								<svg viewBox="0 0 24 24" class="h-6 w-6" fill="none" stroke="currentColor">
+									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d={feature.icon} />
 								</svg>
+							</div>
+							{#if feature.badge}
+								<span class="rounded-full bg-red-500/20 px-3 py-1 text-xs font-semibold text-red-200">{feature.badge}</span>
 							{/if}
-							{formState.isLoading ? 'Processing...' : (formState.isSignUp ? 'SIGN UP' : 'SIGN IN')}
-						</button>
-						<p class="mt-3 text-center text-sm text-gray-600">
-							{formState.isSignUp ? 'Already have an account?' : "Don't have an account?"}
-							<button type="button" class="ml-1 text-red-600 hover:text-red-700 font-medium" onclick={toggleMode}>
-								{formState.isSignUp ? 'Sign in' : 'Sign up'}
-							</button>
-						</p>
-					</div>
-				</form>
-
-				<div class="mt-6">
-					<div class="relative">
-						<div class="absolute inset-0 flex items-center">
-							<div class="w-full border-t border-gray-300"></div>
 						</div>
-						<div class="relative flex justify-center text-sm">
-							<span class="px-2 bg-white text-gray-500">Or connect with</span>
+						<h3 class="mt-6 text-xl font-semibold text-white">{feature.title}</h3>
+						<p class="mt-3 text-slate-300">{feature.description}</p>
+					</article>
+				{/each}
+			</div>
+		</div>
+	</section>
+
+	<section id="how-it-works" class="bg-gradient-to-b from-slate-900 to-slate-950 py-20" use:reveal={{ threshold: 0.05 }}>
+		<div class="mx-auto max-w-6xl px-6 lg:px-8">
+			<div class="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+				<div>
+					<p class="text-sm uppercase tracking-[0.5em] text-orange-300 animated-copy">How it works</p>
+					<h2 class="mt-2 text-3xl font-bold text-white sm:text-4xl animated-text">3 steps to your next swap.</h2>
+					<p class="mt-4 text-slate-300 max-w-2xl animated-copy">
+						Built for barangay hall workflows—no crypto wallets required. We abstract the blockchain jargon so your focus stays on people.
+					</p>
+				</div>
+				<button class="rounded-full border border-white/20 px-5 py-3 text-sm font-semibold text-white hover:border-white" onclick={() => handleCta('/sign-in-up?mode=signup')}>
+					Create free account
+				</button>
+			</div>
+
+			<div class="mt-12 grid gap-6 lg:grid-cols-3">
+				{#each steps as step, index}
+					<div class="rounded-3xl border border-white/10 bg-slate-950/60 p-6 card-hover" use:reveal={{ delay: index * 80 }}>
+						<div class="flex items-center justify-between">
+							<span class="text-sm uppercase tracking-[0.5em] text-slate-500">Step {index + 1}</span>
+							<span class="rounded-full bg-white/10 px-3 py-1 text-xs text-white">{step.action}</span>
+						</div>
+						<h3 class="mt-4 text-2xl font-semibold text-white">{step.title}</h3>
+						<p class="mt-3 text-slate-300">{step.body}</p>
+					</div>
+				{/each}
+			</div>
+		</div>
+	</section>
+
+	<section id="impact" class="border-t border-white/5 bg-slate-950 py-20">
+		<div class="mx-auto max-w-6xl px-6 lg:px-8">
+			<div class="grid gap-12 lg:grid-cols-[1.1fr,0.9fr]">
+				<div class="space-y-6" use:reveal={{ threshold: 0.15 }}>
+					<p class="text-sm uppercase tracking-[0.5em] text-lime-300 animated-copy">Impact in motion</p>
+					<h2 class="text-3xl font-bold text-white sm:text-4xl animated-text">Data your city hall will love.</h2>
+					<p class="text-slate-300 animated-copy">
+						Every barter automatically logs environmental savings, economic value, and volunteer hours. Export-ready dashboards help barangays secure funding faster.
+					</p>
+
+					<div class="grid gap-4 sm:grid-cols-2">
+						<div class="rounded-3xl border border-white/10 bg-slate-900/70 p-5 stat-card">
+							<p class="text-xs uppercase tracking-[0.4em] text-slate-500">Relief drives this month</p>
+							<p class="mt-3 text-4xl font-semibold text-white">42</p>
+							<p class="text-sm text-slate-400">12,800 beneficiaries & counting</p>
+						</div>
+						<div class="rounded-3xl border border-white/10 bg-slate-900/70 p-5 stat-card">
+							<p class="text-xs uppercase tracking-[0.4em] text-slate-500">Goods upcycled</p>
+							<p class="mt-3 text-4xl font-semibold text-white">68%</p>
+							<p class="text-sm text-slate-400">increase vs. last quarter</p>
 						</div>
 					</div>
 
-					<div class="mt-6 grid grid-cols-3 gap-3">
-						<button
-							type="button"
-							onclick={() => handleSocialLogin('google')}
-							disabled={formState.isLoading}
-							class="w-full inline-flex justify-center py-3 px-4 border border-gray-300 rounded-lg shadow-sm bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 hover:border-gray-400 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-							aria-label="Sign in with Google"
-						>
-							<svg class="h-5 w-5" viewBox="0 0 24 24">
-								<path fill="currentColor" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-								<path fill="currentColor" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-								<path fill="currentColor" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
-								<path fill="currentColor" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
-							</svg>
-						</button>
+					<div class="rounded-3xl bg-gradient-to-r from-lime-500/20 to-sky-500/20 p-6 text-sm text-slate-100">
+						<div class="flex items-center gap-3">
+							<div class="h-10 w-10 rounded-2xl bg-white/20 flex items-center justify-center text-lime-300">
+								<svg viewBox="0 0 24 24" class="h-5 w-5" fill="none" stroke="currentColor">
+									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+								</svg>
+							</div>
+							<p>
+								Certified by the Philippine Disaster Resilience Foundation for use in community-based preparedness programs.
+							</p>
+						</div>
+					</div>
+				</div>
 
-						<button
-							type="button"
-							onclick={() => handleSocialLogin('apple')}
-							disabled={formState.isLoading}
-							class="w-full inline-flex justify-center py-3 px-4 border border-gray-300 rounded-lg shadow-sm bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 hover:border-gray-400 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-							aria-label="Sign in with Apple"
-						>
-							<svg class="h-5 w-5" fill="currentColor" viewBox="0 0 24 24">
-								<path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/>
-							</svg>
-						</button>
+				<div class="space-y-6" use:reveal={{ threshold: 0.15, delay: 150 }}>
+					<div class="rounded-3xl border border-white/10 bg-slate-900/50 p-6">
+					<p class="text-sm uppercase tracking-[0.5em] text-orange-300 animated-copy">Testimonials</p>
+						<div class="mt-6 space-y-6">
+							{#each testimonials as testimonial}
+								<blockquote class="rounded-2xl bg-slate-950/70 p-5 border border-white/5">
+									<p class="text-slate-100">“{testimonial.quote}”</p>
+									<footer class="mt-4 text-sm text-slate-400">
+										<strong class="text-white">{testimonial.author}</strong> · {testimonial.role}
+									</footer>
+								</blockquote>
+							{/each}
+						</div>
+					</div>
 
-						<button
-							type="button"
-							onclick={() => handleSocialLogin('facebook')}
-							disabled={formState.isLoading}
-							class="w-full inline-flex justify-center py-3 px-4 border border-gray-300 rounded-lg shadow-sm bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 hover:border-gray-400 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-							aria-label="Sign in with Facebook"
-						>
-							<svg class="h-5 w-5" fill="currentColor" viewBox="0 0 24 24">
-								<path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
-							</svg>
-						</button>
+					<div class="rounded-3xl border border-white/10 bg-slate-900/70 p-6 card-hover">
+					<p class="text-sm uppercase tracking-[0.5em] text-slate-400 animated-copy">Community spotlight</p>
+						<div class="mt-4 space-y-4 text-sm text-slate-300">
+							<div class="flex items-center justify-between rounded-2xl bg-white/5 p-4">
+								<div>
+									<p class="font-semibold text-white">Quezon City Bike Library</p>
+									<p class="text-slate-400">62 bikes donated · 180 riders served</p>
+								</div>
+								<span class="rounded-full bg-lime-400/20 px-3 py-1 text-xs text-lime-200">ACTIVE</span>
+							</div>
+							<div class="flex items-center justify-between rounded-2xl bg-white/5 p-4">
+								<div>
+									<p class="font-semibold text-white">Visayas Classroom Refresh</p>
+									<p class="text-slate-400">208 chairs · 93 desks matched</p>
+								</div>
+								<span class="rounded-full bg-orange-400/20 px-3 py-1 text-xs text-orange-200">IN PROGRESS</span>
+							</div>
+						</div>
 					</div>
 				</div>
 			</div>
 		</div>
-	</div>
+	</section>
+
+	<section id="faq" class="border-t border-white/5 bg-slate-900 py-20" use:reveal={{ threshold: 0.05 }}>
+		<div class="mx-auto max-w-6xl px-6 lg:px-8">
+			<div class="grid gap-10 lg:grid-cols-[0.8fr,1.2fr]">
+				<div use:reveal={{ threshold: 0.1 }}>
+					<p class="text-sm uppercase tracking-[0.5em] text-slate-400 animated-copy">Questions?</p>
+					<h2 class="mt-3 text-3xl font-bold text-white animated-text">We’re here for every barangay leader.</h2>
+					<p class="mt-4 text-slate-300 animated-copy">
+						Not sure how to kickstart your barter hub? Book a 15-minute onboarding with our community playbook team.
+					</p>
+					<div class="mt-6 flex flex-wrap gap-3 text-sm text-slate-300">
+						<button class="rounded-2xl border border-white/20 px-6 py-3 font-semibold hover:border-white" onclick={() => handleCta('/sign-in-up?mode=signup')}>
+							Schedule onboarding
+						</button>
+						<button class="rounded-2xl bg-white/10 px-6 py-3 font-semibold hover:bg-white/20" onclick={() => handleCta('/help')}>
+							Visit help center
+						</button>
+					</div>
+				</div>
+
+				<div class="space-y-4">
+					{#each faqs as faq, index}
+						<details class="rounded-2xl border border-white/10 bg-slate-950/70 p-5" use:reveal={{ delay: index * 60 }}>
+							<summary class="cursor-pointer text-lg font-semibold text-white">{faq.question}</summary>
+							<p class="mt-3 text-slate-300">{faq.answer}</p>
+						</details>
+					{/each}
+				</div>
+			</div>
+		</div>
+	</section>
+
+	<section class="border-t border-white/5 bg-gradient-to-r from-red-600 via-orange-500 to-rose-500 py-16" use:reveal={{ threshold: 0.05 }}>
+		<div class="mx-auto flex max-w-5xl flex-col gap-8 px-6 text-center text-white lg:px-8">
+			<h2 class="text-3xl font-bold sm:text-4xl animated-text">Ready to relaunch barter culture in your community?</h2>
+			<p class="text-lg text-white/90 animated-copy">
+				Spin up your first campaign in minutes, invite neighbors with magic links, and monitor every impact metric from one dashboard.
+			</p>
+			<div class="flex flex-wrap justify-center gap-4">
+				<button class="rounded-2xl bg-white px-8 py-3 text-lg font-semibold text-red-600" onclick={() => handleCta('/sign-in-up?mode=signup')}>
+					Start free
+				</button>
+				<button class="rounded-2xl border border-white px-8 py-3 text-lg font-semibold" onclick={() => handleCta('/discovery')}>
+					Explore live trades
+				</button>
+			</div>
+		</div>
+	</section>
 </div>
+
+<style>
+	:global(.animated-text) {
+		background-image: linear-gradient(120deg, #ffffff 0%, #fbbf24 40%, #f87171 60%, #ffffff 100%);
+		background-size: 200% auto;
+		-webkit-background-clip: text;
+		-webkit-text-fill-color: transparent;
+		animation: textGlow 8s ease-in-out infinite;
+	}
+
+	:global(.animated-copy) {
+		color: rgba(226, 232, 240, 0.85);
+		animation: copyBreathe 6s ease-in-out infinite;
+	}
+
+	@keyframes textGlow {
+		0% {
+			background-position: 0% 50%;
+			filter: drop-shadow(0 0 0 rgba(248, 113, 113, 0));
+		}
+		50% {
+			background-position: 100% 50%;
+			filter: drop-shadow(0 8px 20px rgba(248, 113, 113, 0.35));
+		}
+		100% {
+			background-position: 0% 50%;
+			filter: drop-shadow(0 0 0 rgba(248, 113, 113, 0));
+		}
+	}
+
+	@keyframes copyBreathe {
+		0%,
+		100% {
+			color: rgba(226, 232, 240, 0.75);
+		}
+		50% {
+			color: rgba(248, 250, 252, 0.95);
+		}
+	}
+
+	:global(.hero-section) {
+		background: radial-gradient(circle at top, rgba(255, 255, 255, 0.05), transparent 45%);
+	}
+
+	:global(.hero-aurora) {
+		position: absolute;
+		width: 60%;
+		height: 60%;
+		filter: blur(120px);
+		opacity: 0.35;
+		z-index: 0;
+		animation: auroraShift 18s ease-in-out infinite alternate;
+	}
+
+	:global(.hero-aurora--one) {
+		top: -20%;
+		left: -10%;
+		background: radial-gradient(circle, rgba(239, 68, 68, 0.6), transparent 60%);
+	}
+
+	:global(.hero-aurora--two) {
+		bottom: -30%;
+		right: -20%;
+		background: radial-gradient(circle, rgba(249, 115, 22, 0.6), transparent 60%);
+		animation-delay: 6s;
+	}
+
+	@keyframes auroraShift {
+		0% {
+			transform: translate3d(0, 0, 0) scale(1);
+		}
+		100% {
+			transform: translate3d(5%, -5%, 0) scale(1.1);
+		}
+	}
+
+	:global(.floating-orb) {
+		animation: orbFloat 20s ease-in-out infinite alternate;
+	}
+
+	@keyframes orbFloat {
+		0% {
+			transform: translate3d(0, 0, 0) scale(1);
+		}
+		50% {
+			transform: translate3d(20px, -10px, 0) scale(1.05);
+		}
+		100% {
+			transform: translate3d(-10px, 15px, 0) scale(0.98);
+		}
+	}
+
+	:global(.glow-button) {
+		position: relative;
+		overflow: hidden;
+	}
+
+	:global(.glow-button::after) {
+		content: '';
+		position: absolute;
+		top: -50%;
+		left: -50%;
+		width: 200%;
+		height: 200%;
+		background: radial-gradient(circle, rgba(255, 255, 255, 0.3), transparent 60%);
+		opacity: 0;
+		animation: buttonGlow 4s ease-in-out infinite;
+	}
+
+	@keyframes buttonGlow {
+		0%,
+		60% {
+			opacity: 0;
+			transform: scale(0.6);
+		}
+		80% {
+			opacity: 0.8;
+		}
+		100% {
+			opacity: 0;
+			transform: scale(1.2);
+		}
+	}
+
+	:global(.scroll-indicator) {
+		margin-top: 3rem;
+		display: inline-flex;
+		align-items: center;
+		gap: 0.75rem;
+		color: rgba(148, 163, 184, 0.8);
+		font-size: 0.85rem;
+		letter-spacing: 0.2em;
+		text-transform: uppercase;
+	}
+
+	:global(.scroll-indicator span) {
+		display: inline-block;
+		width: 30px;
+		height: 30px;
+		border-radius: 999px;
+		border: 1px solid rgba(255, 255, 255, 0.3);
+		position: relative;
+	}
+
+	:global(.scroll-indicator span::after) {
+		content: '';
+		position: absolute;
+		top: 6px;
+		left: 50%;
+		width: 6px;
+		height: 6px;
+		background: white;
+		border-radius: 50%;
+		transform: translateX(-50%);
+		animation: scrollPulse 2.4s ease-in-out infinite;
+	}
+
+	@keyframes scrollPulse {
+		0% {
+			transform: translate(-50%, 0);
+			opacity: 0;
+		}
+		40% {
+			opacity: 1;
+		}
+		100% {
+			transform: translate(-50%, 12px);
+			opacity: 0;
+		}
+	}
+
+	:global(.card-hover) {
+		transition: transform 0.5s ease, border-color 0.5s ease, box-shadow 0.5s ease;
+	}
+
+	:global(.card-hover:hover) {
+		transform: translateY(-6px);
+		border-color: rgba(248, 250, 252, 0.4);
+		box-shadow: 0 15px 40px rgba(15, 23, 42, 0.7);
+	}
+
+	:global(.stat-card) {
+		position: relative;
+		overflow: hidden;
+	}
+
+	:global(.stat-card::after) {
+		content: '';
+		position: absolute;
+		top: -20%;
+		left: -20%;
+		width: 140%;
+		height: 140%;
+		background: radial-gradient(circle, rgba(255, 255, 255, 0.15), transparent 60%);
+		animation: statGlow 8s ease-in-out infinite;
+		z-index: 0;
+	}
+
+	:global(.stat-card > *) {
+		position: relative;
+		z-index: 1;
+	}
+
+	@keyframes statGlow {
+		0% {
+			transform: translate3d(-10%, -10%, 0);
+			opacity: 0.3;
+		}
+		50% {
+			transform: translate3d(10%, 10%, 0);
+			opacity: 0.6;
+		}
+		100% {
+			transform: translate3d(-5%, 5%, 0);
+			opacity: 0.3;
+		}
+	}
+
+	:global(.reveal-hidden) {
+		opacity: 0;
+		transform: translateY(48px) scale(0.975);
+		filter: blur(6px);
+		transition:
+			opacity 1.2s cubic-bezier(0.16, 1, 0.3, 1),
+			transform 1.2s cubic-bezier(0.16, 1, 0.3, 1),
+			filter 1.2s cubic-bezier(0.16, 1, 0.3, 1);
+		will-change: opacity, transform, filter;
+	}
+
+	:global(.reveal-visible) {
+		opacity: 1;
+		transform: translateY(0) scale(1);
+		filter: blur(0);
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		:global(.reveal-hidden),
+		:global(.reveal-visible) {
+			opacity: 1 !important;
+			transform: none !important;
+			filter: none !important;
+			transition: none !important;
+		}
+		:global(.floating-orb),
+		:global(.hero-aurora),
+		:global(.scroll-indicator span::after),
+		:global(.glow-button::after),
+		:global(.stat-card::after) {
+			animation: none !important;
+		}
+	}
+
+	:global(.pulse-pill) {
+		position: relative;
+		overflow: hidden;
+	}
+
+	:global(.pulse-pill::after) {
+		content: '';
+		position: absolute;
+		inset: -50%;
+		background: radial-gradient(circle, rgba(190, 242, 100, 0.45), transparent 65%);
+		animation: pillPulse 4s ease-in-out infinite;
+		opacity: 0;
+	}
+
+	@keyframes pillPulse {
+		0%,
+		60% {
+			opacity: 0;
+			transform: scale(0.7);
+		}
+		80% {
+			opacity: 0.4;
+		}
+		100% {
+			opacity: 0;
+			transform: scale(1.2);
+		}
+	}
+</style>

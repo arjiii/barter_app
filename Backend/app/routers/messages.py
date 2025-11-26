@@ -1,9 +1,11 @@
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, BackgroundTasks
 from sqlalchemy.orm import Session
 from sqlalchemy import desc, or_, func
 from uuid import uuid4
+from datetime import datetime
 from ..database import get_db
 from .. import models, schemas
+from ..websocket_manager import trade_ws_manager
 
 
 router = APIRouter(prefix="/messages", tags=["messages"])
@@ -72,19 +74,27 @@ def list_conversations(user_id: str = Query(...), db: Session = Depends(get_db))
 		else:
 			trade_item_title = item_map.get(t.to_item_id) or item_map.get(t.from_item_id)
 
+		last_msg_time = ''
+		if last_msg:
+			if last_msg.created_at:
+				last_msg_time = last_msg.created_at.isoformat()
+			else:
+				# Fallback to trade timestamps so list ordering still works
+				last_msg_time = t.updated_at.isoformat() if t.updated_at else ''
+
 		convs.append({
 			"tradeId": t.id,
 			"otherUser": {"id": other.id, "name": other.name},
 			"tradeItemTitle": trade_item_title or '',
 			"lastMessage": last_msg.content if last_msg else '',
-			"lastMessageTime": last_msg.created_at.isoformat() if last_msg else '',
+			"lastMessageTime": last_msg_time,
 			"unreadCount": unread_count,
 		})
 	return convs
 
 
 @router.post("/", response_model=schemas.Message)
-def create_message(payload: dict, db: Session = Depends(get_db)):
+def create_message(payload: dict, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
 	obj = models.Message(
 		id=str(uuid4()),
 		trade_id=payload["trade_id"],
@@ -92,6 +102,7 @@ def create_message(payload: dict, db: Session = Depends(get_db)):
 		receiver_id=payload["receiver_id"],
 		content=payload["content"],
 		is_read=payload.get("is_read", False),
+		created_at=datetime.utcnow(),
 	)
 	db.add(obj)
 	# Update trade updated_at to surface conversation
@@ -100,6 +111,20 @@ def create_message(payload: dict, db: Session = Depends(get_db)):
 		trade.updated_at = func.now()
 	db.commit()
 	db.refresh(obj)
+
+	payload = {
+		"type": "message",
+		"message": {
+			"id": obj.id,
+			"tradeId": obj.trade_id,
+			"senderId": obj.sender_id,
+			"receiverId": obj.receiver_id,
+			"content": obj.content,
+			"isRead": obj.is_read,
+			"createdAt": obj.created_at.isoformat() if obj.created_at else datetime.utcnow().isoformat()
+		}
+	}
+	background_tasks.add_task(trade_ws_manager.broadcast_message, obj.trade_id, payload)
 	return obj
 
 

@@ -1,9 +1,12 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
+	import { onMount, onDestroy } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
 	import { authStore } from '$lib/stores/authStore';
 	import { messageService } from '$lib/services/messageService';
+	import { API_BASE_URL } from '$lib/config/api';
+	import { tradeService } from '$lib/services/tradeService';
+	import { userService } from '$lib/services/userService';
 	import LoadingSpinner from '../components/LoadingSpinner.svelte';
 	import type { User } from '$lib/types/auth';
 	import type { Conversation, Message } from '$lib/types/messages';
@@ -16,7 +19,13 @@
 	let conversations: Conversation[] = $state([]);
 	let messages: Message[] = $state([]);
 	let error: string | null = $state(null);
-	let pendingTradeId: string | null = $state(null);
+let pendingTradeId: string | null = $state(null);
+let isRefreshingConversations = $state(false);
+let pendingConversationRetryCount = $state(0);
+let pendingRefetchInFlight = $state(false);
+let activeSocket: WebSocket | null = null;
+let socketReconnectAttempts = 0;
+const WS_BASE_URL = API_BASE_URL.replace(/^http/, 'ws');
 
 function getAvatar(name?: string, url?: string) {
 	const fallbackName = name || 'User';
@@ -36,46 +45,64 @@ function formatTimestamp(timestamp?: string) {
 	));
 
 	async function loadConversations() {
-		if (!user) return;
+		if (!user || isRefreshingConversations) return;
 		try {
 			isLoading = true;
+			isRefreshingConversations = true;
 			error = null;
 			
-			// Add timeout to prevent infinite loading
-			const timeoutPromise = new Promise((_, reject) => 
+			const timeoutPromise = new Promise((_, reject) =>
 				setTimeout(() => reject(new Error('Request timeout')), 10000)
 			);
 			
 			const convsPromise = messageService.getConversations(user.id);
-            const convs = await Promise.race([convsPromise, timeoutPromise]) as Conversation[];
-            // Deduplicate by otherUser.id, keep latest lastMessageTime
-            const byUser = new Map<string, Conversation>();
-            for (const c of convs) {
-                const key = c.otherUser.id;
-                const existing = byUser.get(key);
-                if (!existing) byUser.set(key, c);
-                else {
-                    const exTime = new Date(existing.lastMessageTime || 0).getTime();
-                    const curTime = new Date(c.lastMessageTime || 0).getTime();
-                    if (curTime > exTime) byUser.set(key, c);
-                }
-            }
-            conversations = Array.from(byUser.values());
+			const convs = (await Promise.race([convsPromise, timeoutPromise])) as Conversation[];
+			const byUser = new Map<string, Conversation>();
+			for (const c of convs) {
+				const key = c.otherUser.id;
+				const existing = byUser.get(key);
+				if (!existing) byUser.set(key, c);
+				else {
+					const exTime = new Date(existing.lastMessageTime || 0).getTime();
+					const curTime = new Date(c.lastMessageTime || 0).getTime();
+					if (curTime > exTime) byUser.set(key, c);
+				}
+			}
+			const deduped = Array.from(byUser.values()).filter((conv) => conv.otherUser?.id && conv.otherUser.id !== user.id);
+			conversations = deduped.sort((a, b) => {
+				const aTime = new Date(a.lastMessageTime || 0).getTime();
+				const bTime = new Date(b.lastMessageTime || 0).getTime();
+				return bTime - aTime;
+			});
 			if (pendingTradeId) {
 				const pending = conversations.find((c) => c.tradeId === pendingTradeId);
 				if (pending) {
 					selectConversation(pending);
 					pendingTradeId = null;
+					pendingConversationRetryCount = 0;
 				}
 			}
 		} catch (err) {
 			console.error('Error loading conversations:', err);
-			error = (err as Error).message === 'Request timeout' 
-				? 'Request timed out. Please check your connection and try again.'
-				: 'Failed to load conversations. Please try again.';
+			error =
+				(err as Error).message === 'Request timeout'
+					? 'Request timed out. Please check your connection and try again.'
+					: 'Failed to load conversations. Please ensure the API is running.';
 			conversations = [];
 		} finally {
 			isLoading = false;
+			isRefreshingConversations = false;
+		}
+	}
+
+	function upsertIncomingMessage(incoming: Message) {
+		const exists = messages.some((msg) => msg.id === incoming.id);
+		if (exists) {
+			messages = messages.map((msg) => (msg.id === incoming.id ? incoming : msg));
+		} else {
+			messages = [...messages, incoming].sort(
+				(a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+			);
 		}
 	}
 
@@ -89,6 +116,63 @@ function formatTimestamp(timestamp?: string) {
 		}
 	}
 
+	function closeSocket() {
+		if (activeSocket) {
+			activeSocket.onopen = null;
+			activeSocket.onclose = null;
+			activeSocket.onmessage = null;
+			activeSocket.onerror = null;
+			activeSocket.close();
+			activeSocket = null;
+		}
+	}
+
+	function openSocket(tradeId: string) {
+		if (!user) return;
+		closeSocket();
+		const wsUrl = `${WS_BASE_URL}/ws/trades/${tradeId}?user_id=${encodeURIComponent(user.id)}`;
+		const socket = new WebSocket(wsUrl);
+		activeSocket = socket;
+
+		socket.onopen = () => {
+			socketReconnectAttempts = 0;
+		};
+
+		socket.onmessage = (event) => {
+			try {
+				const data = JSON.parse(event.data);
+				if (data?.type === 'message' && data?.message) {
+					const incoming = data.message;
+					if (incoming.tradeId !== tradeId) return;
+					upsertIncomingMessage({
+						id: incoming.id,
+						tradeId: incoming.tradeId,
+						senderId: incoming.senderId,
+						receiverId: incoming.receiverId,
+						content: incoming.content,
+						isRead: incoming.isRead,
+						createdAt: incoming.createdAt ? new Date(incoming.createdAt) : new Date()
+					});
+					loadConversations();
+				}
+			} catch (err) {
+				console.warn('Failed to parse realtime message', err);
+			}
+		};
+
+		socket.onclose = () => {
+			if (selectedConversation?.tradeId === tradeId && socketReconnectAttempts < 5) {
+				const delay = Math.min(1000 * 2 ** socketReconnectAttempts, 10000);
+				socketReconnectAttempts += 1;
+				setTimeout(() => openSocket(tradeId), delay);
+			}
+		};
+
+		socket.onerror = () => {
+			socket.close();
+		};
+	}
+
 	// Watch for ?trade=<id> query parameter and auto-select conversation
 	$effect(() => {
 		if (!isAuthenticated || !user) return;
@@ -97,6 +181,7 @@ function formatTimestamp(timestamp?: string) {
 
 		if (!tradeId) {
 			pendingTradeId = null;
+			pendingConversationRetryCount = 0;
 			return;
 		}
 
@@ -108,8 +193,16 @@ function formatTimestamp(timestamp?: string) {
 			if (!selectedConversation || selectedConversation.tradeId !== tradeId) {
 				selectConversation(tradeConversation);
 			}
-		} else if (!isLoading) {
-			loadConversations();
+		} else if (!isLoading && !pendingRefetchInFlight && pendingConversationRetryCount < 2) {
+			pendingRefetchInFlight = true;
+			pendingConversationRetryCount += 1;
+			loadConversations().finally(() => {
+				pendingRefetchInFlight = false;
+				if (pendingConversationRetryCount >= 2 && pendingTradeId) {
+					hydrateConversationFromTrade(pendingTradeId);
+					pendingTradeId = null;
+				}
+			});
 		}
 	});
 
@@ -120,6 +213,7 @@ function formatTimestamp(timestamp?: string) {
 			isLoading = authState.isLoading;
 			if (!authState.isLoading && !authState.isAuthenticated) {
 				goto('/sign-in-up');
+				closeSocket();
 			} else if (authState.isAuthenticated && authState.user) {
 				await loadConversations();
 			}
@@ -127,10 +221,15 @@ function formatTimestamp(timestamp?: string) {
 		return () => unsubscribe();
 	});
 
+	onDestroy(() => {
+		closeSocket();
+	});
+
 	async function selectConversation(conversation: Conversation) {
 		selectedConversation = conversation;
 		pendingTradeId = conversation.tradeId === pendingTradeId ? null : pendingTradeId;
 		await loadMessages(conversation.tradeId);
+		openSocket(conversation.tradeId);
 	}
 
 	async function sendMessage() {
@@ -146,8 +245,49 @@ function formatTimestamp(timestamp?: string) {
 			});
 			messageInput.value = '';
 			await loadMessages(selectedConversation.tradeId);
+			await loadConversations();
 		} catch (error) {
 			console.error('Error sending message:', error);
+		}
+	}
+
+	async function hydrateConversationFromTrade(tradeId: string) {
+		if (!user) return;
+		try {
+			const trade = await tradeService.getTradeById(tradeId);
+			if (!trade) {
+				error = 'Conversation not found. The trade reference is missing.';
+				return;
+			}
+
+			const otherUserId = trade.fromUserId === user.id ? trade.toUserId : trade.fromUserId;
+			const otherUser = await userService.getUserById(otherUserId);
+			if (!otherUser) {
+				error = 'Unable to load the other member for this conversation.';
+				return;
+			}
+
+			const syntheticConversation: Conversation = {
+				tradeId: trade.id,
+				otherUser: {
+					id: otherUser.id,
+					name: otherUser.name || 'User',
+					avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(otherUser.name || 'User')}&background=ef4444&color=fff`,
+					online: false
+				},
+				tradeItem: { title: trade.message || 'Direct chat' },
+				lastMessage: '',
+				lastMessageTime: trade.updatedAt ? trade.updatedAt.toISOString?.() ?? '' : '',
+				unreadCount: 0
+			};
+
+			conversations = [syntheticConversation, ...conversations.filter((c) => c.tradeId !== trade.id)];
+			pendingConversationRetryCount = 0;
+			error = null;
+			await selectConversation(syntheticConversation);
+		} catch (err) {
+			console.error('Failed to hydrate conversation from trade:', err);
+			error = 'We could not open this chat because the conversation list failed to load.';
 		}
 	}
 </script>
@@ -155,10 +295,28 @@ function formatTimestamp(timestamp?: string) {
 <div class="p-4 lg:p-6">
 	<!-- Header removed per request -->
 
-	{#if isLoading}
+{#if isLoading}
 		<LoadingSpinner size="large" message="Loading your messages..." />
 	{:else if isAuthenticated}
 		<div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+			{#if error}
+				<div class="bg-yellow-50 border-b border-yellow-200 px-4 py-3 text-sm text-yellow-900 flex items-center justify-between">
+					<div class="flex items-center gap-2">
+						<svg class="h-5 w-5 text-yellow-500" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+						</svg>
+						<span>{error}</span>
+					</div>
+					<div class="space-x-2">
+						<button class="text-sm font-semibold text-red-600 hover:underline" onclick={() => { pendingConversationRetryCount = 0; loadConversations(); }}>
+							Try again
+						</button>
+						<button class="text-sm text-gray-600 hover:underline" onclick={() => location.reload()}>
+							Refresh
+						</button>
+					</div>
+				</div>
+			{/if}
 			<div class="flex flex-col lg:flex-row h-[600px]">
 				<!-- Conversations List -->
 				<div class="w-full lg:w-1/3 border-b lg:border-b-0 lg:border-r border-gray-200 flex flex-col">

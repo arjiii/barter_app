@@ -47,6 +47,8 @@ def list_items(
 	user_id: str | None = Query(default=None),
 	status: str | None = Query(default=None),
 	category: str | None = Query(default=None),
+	limit: int = Query(default=100, ge=1, le=500),
+	offset: int = Query(default=0, ge=0),
 	db: Session = Depends(get_db),
 ):
     try:
@@ -63,7 +65,26 @@ def list_items(
         if category and category != 'all':
             q = q.filter(models.Item.category == category)
 
-        rows = q.order_by(models.Item.created_at.desc()).all()
+        try:
+            # Preferred: newest first
+            rows = (
+                q.order_by(models.Item.created_at.desc())
+                .limit(limit)
+                .offset(offset)
+                .all()
+            )
+        except Exception as inner:
+            # MySQL "Out of sort memory" – retry without ORDER BY so at least items show
+            if "Out of sort memory" in str(inner):
+                rows = (
+                    q.order_by(None)
+                    .limit(limit)
+                    .offset(offset)
+                    .all()
+                )
+            else:
+                raise
+
         return [_serialize_item(item, owner_name, owner_id) for item, owner_name, owner_id in rows]
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Failed to list items: {e}")

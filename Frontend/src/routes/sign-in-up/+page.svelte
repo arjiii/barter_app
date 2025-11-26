@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
+	import { page } from '$app/stores';
 	import { onMount } from 'svelte';
 	import type { LoginCredentials, SignUpCredentials, FormState, ValidationErrors } from '$lib/types/auth';
 	import { authService } from '$lib/services/authService';
@@ -22,6 +23,16 @@
 		email: '',
 		password: '',
 		rememberMe: false
+	});
+
+	// Respect mode query param (?mode=signup) when users come from landing
+	$effect(() => {
+		const mode = $page.url.searchParams.get('mode');
+		if (mode === 'signup') {
+			formState.isSignUp = true;
+		} else if (mode === 'signin') {
+			formState.isSignUp = false;
+		}
 	});
 
 	// UI state

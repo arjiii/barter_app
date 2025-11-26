@@ -6,6 +6,7 @@
 	import { userService } from '$lib/services/userService';
 	import { tradeService } from '$lib/services/tradeService';
 	import { itemService } from '$lib/services/itemService';
+	import { messageService } from '$lib/services/messageService';
 	import type { User } from '$lib/types/auth';
 
 	let profileUser: User | null = $state(null);
@@ -18,6 +19,7 @@
 	let isLoadingRatings = $state(true);
 	let isLoadingItems = $state(true);
 	let isLoadingTrades = $state(true);
+	let isStartingChat = $state(false);
 
 	let userId = $derived($page.params.id);
 
@@ -124,6 +126,87 @@
 		}
 	}
 
+	async function ensureRecipientHasAnchorItem(): Promise<string | null> {
+		if (userItems.length > 0) {
+			return userItems[0]?.id || null;
+		}
+
+		try {
+			const items = await itemService.getItems({ userId });
+			const available = items.find((item) => item.status === 'available');
+			if (available) {
+				userItems = [available, ...userItems];
+				return available.id;
+			}
+		} catch (error) {
+			console.warn('Failed to fetch items for chat context:', error);
+		}
+
+		return null;
+	}
+
+	async function handleMessageUser() {
+		if (!profileUser) return;
+		if (!currentUser) {
+			goto('/sign-in-up');
+			return;
+		}
+		if (currentUser.id === profileUser.id) {
+			return;
+		}
+
+		try {
+			isStartingChat = true;
+
+			const trades = await tradeService.getTrades({ userId: currentUser.id });
+			const existingTrade = trades.find(
+				(trade) =>
+					(trade.fromUserId === currentUser.id && trade.toUserId === profileUser.id) ||
+					(trade.toUserId === currentUser.id && trade.fromUserId === profileUser.id)
+			);
+
+			if (existingTrade) {
+				await goto(`/messages?trade=${existingTrade.id}`);
+				return;
+			}
+
+			const anchorItemId = await ensureRecipientHasAnchorItem();
+			if (!anchorItemId) {
+				alert('This neighbor has no active listings yet, so messaging is unavailable for now.');
+				return;
+			}
+
+			const quickMessage = `Hi ${profileUser.name || 'there'}! I'd love to connect.`;
+			const createdTrade = await tradeService.createTrade(currentUser.id, {
+				toUserId: profileUser.id,
+				fromItemId: anchorItemId,
+				toItemId: anchorItemId,
+				message: quickMessage
+			});
+
+			if (createdTrade) {
+				try {
+					await messageService.createMessage(currentUser.id, {
+						tradeId: createdTrade.id,
+						receiverId: profileUser.id,
+						content: quickMessage
+					});
+				} catch (err) {
+					console.warn('Failed to send initial chat message from profile page:', err);
+				}
+
+				await goto(`/messages?trade=${createdTrade.id}`);
+			} else {
+				alert('Unable to start a chat right now. Please try again in a moment.');
+			}
+		} catch (error) {
+			console.error('Error starting chat from profile page:', error);
+			alert('Something went wrong while trying to open a chat.');
+		} finally {
+			isStartingChat = false;
+		}
+	}
+
 	onMount(() => {
 		const unsubscribe = authStore.subscribe((authState) => {
 			currentUser = authState.user;
@@ -162,31 +245,53 @@
 	{:else if profileUser}
 		<!-- Profile Header -->
 		<div class="bg-gradient-to-r from-red-600 to-red-700 rounded-2xl shadow-lg mb-6 p-8 text-white">
-			<div class="flex items-center space-x-6">
-				<div class="w-24 h-24 bg-white bg-opacity-20 rounded-full flex items-center justify-center text-4xl font-bold">
-					{profileUser.name?.charAt(0)?.toUpperCase() || 'U'}
-				</div>
-				<div class="flex-1">
-					<h1 class="text-3xl font-bold mb-2">{profileUser.name || 'User'}</h1>
-					<p class="text-red-100 flex items-center mb-4">
-						<svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 12a4 4 0 10-8 0 4 4 0 008 0zm0 0v1.5a2.5 2.5 0 005 0V12a9 9 0 10-9 9m4.5-1.206a8.959 8.959 0 01-4.5 1.207"></path>
-						</svg>
-						{profileUser.email}
-					</p>
-					{#if ratings.length > 0}
-						<div class="flex items-center space-x-4">
-							<div class="flex items-center bg-white bg-opacity-20 px-4 py-2 rounded-lg">
-								<svg class="w-5 h-5 text-yellow-300 mr-2" fill="currentColor" viewBox="0 0 20 20">
-									<path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path>
-								</svg>
-								<span class="font-semibold">
-									{(ratings.reduce((sum, r) => sum + r.score, 0) / ratings.length).toFixed(1)}
-								</span>
-								<span class="text-red-100 ml-2">({ratings.length} {ratings.length === 1 ? 'review' : 'reviews'})</span>
+			<div class="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+				<div class="flex items-center space-x-6">
+					<div class="w-24 h-24 bg-white bg-opacity-20 rounded-full flex items-center justify-center text-4xl font-bold">
+						{profileUser.name?.charAt(0)?.toUpperCase() || 'U'}
+					</div>
+					<div>
+						<h1 class="text-3xl font-bold mb-2">{profileUser.name || 'User'}</h1>
+						<p class="text-red-100 flex items-center mb-4">
+							<svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 12a4 4 0 10-8 0 4 4 0 008 0zm0 0v1.5a2.5 2.5 0 005 0V12a9 9 0 10-9 9m4.5-1.206a8.959 8.959 0 01-4.5 1.207"></path>
+							</svg>
+							{profileUser.email}
+						</p>
+						{#if ratings.length > 0}
+							<div class="flex items-center space-x-4">
+								<div class="flex items-center bg-white bg-opacity-20 px-4 py-2 rounded-lg">
+									<svg class="w-5 h-5 text-yellow-300 mr-2" fill="currentColor" viewBox="0 0 20 20">
+										<path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path>
+									</svg>
+									<span class="font-semibold">
+										{(ratings.reduce((sum, r) => sum + r.score, 0) / ratings.length).toFixed(1)}
+									</span>
+									<span class="text-red-100 ml-2">({ratings.length} {ratings.length === 1 ? 'review' : 'reviews'})</span>
+								</div>
 							</div>
-						</div>
-					{/if}
+						{/if}
+					</div>
+				</div>
+				<div class="flex flex-wrap gap-3">
+					<button
+						type="button"
+						disabled={isStartingChat || !currentUser || currentUser.id === profileUser.id}
+						onclick={handleMessageUser}
+						class="inline-flex items-center gap-2 rounded-xl bg-white bg-opacity-15 px-5 py-3 font-semibold text-white shadow-lg shadow-red-900/20 transition hover:bg-white hover:text-red-600 disabled:cursor-not-allowed disabled:opacity-60"
+					>
+						{#if isStartingChat}
+							<svg class="h-5 w-5 animate-spin text-current" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+								<circle class="opacity-25" cx="12" cy="12" r="10" stroke-width="4"></circle>
+								<path class="opacity-75" d="M4 12a8 8 0 018-8" stroke-width="4" stroke-linecap="round"></path>
+							</svg>
+						{:else}
+							<svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+							</svg>
+						{/if}
+						Message {profileUser.name?.split(' ')?.[0] || 'User'}
+					</button>
 				</div>
 			</div>
 		</div>
