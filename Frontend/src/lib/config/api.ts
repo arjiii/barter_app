@@ -1,4 +1,5 @@
-export const API_BASE_URL = 'http://localhost:9000';
+// Use environment variable in production, fallback to localhost for development
+export const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:9000';
 
 /**
  * Check if token is a UUID (offline mode) or JWT (backend mode)
