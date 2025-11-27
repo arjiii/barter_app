@@ -61,17 +61,18 @@ def signup(payload: dict, db: Session = Depends(get_db)):
 
 @router.post("/login")
 def login(form: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
-	# Use explicit column selection to avoid loading location if it doesn't exist
+	# Include location in the query
 	user = db.query(
 		models.User.id,
 		models.User.name,
 		models.User.email,
-		models.User.password_hash
+		models.User.password_hash,
+		models.User.location
 	).filter(models.User.email == form.username).first()
 	if not user or not verify_password(form.password, user.password_hash):
 		raise HTTPException(status_code=400, detail="Invalid credentials")
 	token = create_access_token(user.id)
-	return {"user": {"id": user.id, "name": user.name, "email": user.email}, "token": token}
+	return {"user": {"id": user.id, "name": user.name, "email": user.email, "location": getattr(user, "location", None)}, "token": token}
 
 
 @router.get("/me")
@@ -82,15 +83,16 @@ def me(authorization: str | None = Header(default=None), db: Session = Depends(g
 	user_id = decode_token(token)
 	if not user_id:
 		raise HTTPException(status_code=401, detail="Invalid token")
-	# Use explicit column selection to avoid loading location if it doesn't exist
+	# Include location in the query
 	user = db.query(
 		models.User.id,
 		models.User.name,
-		models.User.email
+		models.User.email,
+		models.User.location
 	).filter(models.User.id == user_id).first()
 	if not user:
 		raise HTTPException(status_code=404, detail="User not found")
-	return {"id": user.id, "name": user.name, "email": user.email}
+	return {"id": user.id, "name": user.name, "email": user.email, "location": getattr(user, "location", None)}
 
 
 def _require_user_from_token(authorization: str | None, db: Session):
@@ -116,20 +118,25 @@ def _require_user_from_token(authorization: str | None, db: Session):
 def update_profile(payload: dict, authorization: str | None = Header(default=None), db: Session = Depends(get_db)):
     user_row = _require_user_from_token(authorization, db)
     name = payload.get("name")
+    location = payload.get("location")
     if not name or not isinstance(name, str) or not name.strip():
         raise HTTPException(status_code=400, detail="Name is required")
-    # Update using SQL UPDATE to avoid loading full model with location column
+    # Update using SQL UPDATE - include location if provided
     from sqlalchemy import update
-    stmt = update(models.User).where(models.User.id == user_row.id).values(name=name.strip())
+    update_values = {"name": name.strip()}
+    if location is not None:  # Allow empty string to clear location
+        update_values["location"] = location.strip() if isinstance(location, str) else None
+    stmt = update(models.User).where(models.User.id == user_row.id).values(**update_values)
     db.execute(stmt)
     db.commit()
-    # Query back with explicit columns to avoid location column issue
+    # Query back with location included
     updated_user = db.query(
         models.User.id,
         models.User.name,
-        models.User.email
+        models.User.email,
+        models.User.location
     ).filter(models.User.id == user_row.id).first()
-    return {"id": updated_user.id, "name": updated_user.name, "email": updated_user.email}
+    return {"id": updated_user.id, "name": updated_user.name, "email": updated_user.email, "location": getattr(updated_user, "location", None)}
 
 
 @router.post("/change-password")

@@ -8,6 +8,7 @@ export interface User {
 	role: 'user' | 'admin' | 'moderator';
 	createdAt: Date;
 	lastLoginAt?: Date;
+	location?: string;
 }
 
 export interface AuthResponse {

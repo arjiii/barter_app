@@ -18,7 +18,8 @@
 	let authInitialized = $state(false);
 	let searchQuery = $state('');
 	let selectedCategory = $state('all');
-let desiredQuery = $state('');
+	let desiredQuery = $state('');
+	let filterByLocation = $state(false);
 	let items: Item[] = $state([]);
 	let categories: Category[] = $state([]);
 	let isLoading = $state(true);
@@ -33,7 +34,23 @@ let desiredQuery = $state('');
     // AI-ish preference boost: if desiredQuery provided, prefer items containing it
     const wants = desiredQuery.trim().toLowerCase();
     const matchesDesired = wants ? (item.title.toLowerCase().includes(wants) || item.description.toLowerCase().includes(wants) || item.category.toLowerCase().includes(wants)) : true;
-    return matchesSearch && matchesCategory && matchesDesired;
+    
+    // Location filter: if enabled, match user location with item location
+    let matchesLocation = true;
+    if (filterByLocation && isAuthenticated && user) {
+      const userLocation = user.location?.trim().toLowerCase();
+      const itemLocation = item.location?.trim().toLowerCase();
+      
+      if (userLocation) {
+        // If user has location, filter items by location match
+        matchesLocation = itemLocation ? itemLocation.includes(userLocation) || userLocation.includes(itemLocation) : false;
+      } else {
+        // If user doesn't have location, show all items (fallback)
+        matchesLocation = true;
+      }
+    }
+    
+    return matchesSearch && matchesCategory && matchesDesired && matchesLocation;
 	}));
 
 	async function loadData() {
@@ -116,13 +133,15 @@ let desiredQuery = $state('');
 
 		if (!user) return;
 
+		const currentUserId = user.id; // Store in local variable for TypeScript
+
 		try {
 			// 1) Check for any existing trade between current user and item owner
-			const trades = await tradeService.getTrades({ userId: user.id });
+			const trades = await tradeService.getTrades({ userId: currentUserId });
 			const existingTrade = trades.find((t) => {
 				return (
-					(t.fromUserId === user.id && t.toUserId === item.userId) ||
-					(t.toUserId === user.id && t.fromUserId === item.userId)
+					(t.fromUserId === currentUserId && t.toUserId === item.userId) ||
+					(t.toUserId === currentUserId && t.fromUserId === item.userId)
 				);
 			});
 
@@ -135,7 +154,7 @@ let desiredQuery = $state('');
 			const quickMessage =
 				`Hi ${item.owner?.name || ''}, I'm interested in your "${item.title}".`.trim();
 
-			const createdTrade = await tradeService.createTrade(user.id, {
+			const createdTrade = await tradeService.createTrade(currentUserId, {
 				toUserId: item.userId,
 				fromItemId: item.id,
 				toItemId: item.id,
@@ -144,7 +163,7 @@ let desiredQuery = $state('');
 
 			if (createdTrade) {
 				try {
-					await messageService.createMessage(user.id, {
+					await messageService.createMessage(currentUserId, {
 						tradeId: createdTrade.id,
 						receiverId: item.userId,
 						content: quickMessage
@@ -168,6 +187,22 @@ let desiredQuery = $state('');
 		// Could show a success message or update UI
 	}
 
+	function toggleLocationFilter() {
+		if (!isAuthenticated || !user) {
+			// Prompt user to sign in if they want to use location filter
+			goto('/sign-in-up');
+			return;
+		}
+		
+		const userLocation = user.location;
+		if (!userLocation && !filterByLocation) {
+			// Show message that user needs to set location first
+			alert('Please set your location in your profile settings to use location-based filtering.');
+			return;
+		}
+		
+		filterByLocation = !filterByLocation;
+	}
 
 	async function createTestUser() {
 		try {
@@ -239,6 +274,25 @@ let desiredQuery = $state('');
 
 			<!-- Action Buttons -->
 			<div class="flex space-x-3">
+				<!-- Location Filter Toggle -->
+				<button 
+					onclick={toggleLocationFilter}
+					class={`px-4 py-3 rounded-xl transition-all duration-200 font-medium flex items-center ${
+						filterByLocation 
+							? 'bg-red-600 text-white hover:bg-red-700' 
+							: 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+					}`}
+					title={isAuthenticated && user && user.location 
+						? `Show items near ${user.location}` 
+						: 'Filter by your location'}
+				>
+					<svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
+						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
+					</svg>
+					<span class="hidden sm:inline">Near Me</span>
+				</button>
+				
 				<!-- Refresh Button -->
 				<button 
 					onclick={loadData}
@@ -248,7 +302,7 @@ let desiredQuery = $state('');
 					<svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
 					</svg>
-					Refresh
+					<span class="hidden sm:inline">Refresh</span>
 				</button>
 				
 			</div>
@@ -281,9 +335,9 @@ let desiredQuery = $state('');
 			</svg>
 			<h3 class="text-lg font-semibold text-gray-900 mb-2">No items found</h3>
 			<p class="text-gray-500 mb-6">Try adjusting your search or filter criteria.</p>
-			{#if searchQuery || selectedCategory !== 'all'}
+			{#if searchQuery || selectedCategory !== 'all' || filterByLocation}
 				<button 
-					onclick={() => { searchQuery = ''; selectedCategory = 'all'; }}
+					onclick={() => { searchQuery = ''; selectedCategory = 'all'; filterByLocation = false; }}
 					class="bg-red-600 text-white px-6 py-2 rounded-lg hover:bg-red-700 transition-colors font-medium"
 				>
 					Clear filters
@@ -404,5 +458,5 @@ let desiredQuery = $state('');
 </div>
 
 <!-- Trade Offer Modal -->
-<TradeOfferModal bind:isOpen={showTradeModal} bind:targetItem={selectedItem} on:tradeCreated={handleTradeCreated} />
+<TradeOfferModal bind:isOpen={showTradeModal} targetItem={selectedItem} on:tradeCreated={handleTradeCreated} />
 

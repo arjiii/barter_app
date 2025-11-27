@@ -11,6 +11,7 @@
   let isAuthenticated = $state(false);
   let isLoading = $state(true);
   let nameInput = $state('');
+  let locationInput = $state('');
   let profileMsg: string | null = $state(null);
   let pwdMsg: string | null = $state(null);
   let oldPassword = $state('');
@@ -62,6 +63,7 @@
       isLoading = authState.isLoading;
       if (authState.user) {
         nameInput = authState.user.name;
+        locationInput = authState.user.location || '';
         if (authState.isAuthenticated) {
           await loadRatings();
         }
@@ -76,7 +78,7 @@
   async function handleSaveProfile() {
     profileMsg = null;
     if (!nameInput.trim()) { profileMsg = 'Name is required'; return; }
-    const updated = await authService.updateProfile(nameInput.trim());
+    const updated = await authService.updateProfile(nameInput.trim(), locationInput.trim());
     if (updated) {
       authStore.setUser(updated);
       profileMsg = 'Profile updated successfully';
@@ -152,9 +154,27 @@
               placeholder="Enter your display name"
             />
           </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">Location</label>
+            <div class="relative">
+              <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                </svg>
+              </div>
+              <input 
+                type="text"
+                class="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-all" 
+                bind:value={locationInput}
+                placeholder="Enter your city/province (e.g., Manila, Quezon City)"
+              />
+            </div>
+            <p class="mt-1 text-xs text-gray-500">Set your location to enable location-based item filtering</p>
+          </div>
           <button 
             class="w-full bg-red-600 hover:bg-red-700 text-white font-semibold px-6 py-3 rounded-lg transition-colors shadow-md hover:shadow-lg" 
-            on:click={handleSaveProfile}
+            onclick={handleSaveProfile}
           >
             Save Changes
           </button>
@@ -203,7 +223,7 @@
           </div>
           <button 
             class="w-full bg-gray-800 hover:bg-gray-900 text-white font-semibold px-6 py-3 rounded-lg transition-colors shadow-md hover:shadow-lg" 
-            on:click={handleChangePassword}
+            onclick={handleChangePassword}
           >
             Update Password
           </button>

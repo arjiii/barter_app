@@ -193,7 +193,8 @@ class AuthService {
                 isVerified: true,
                 role: 'user' as const,
                 createdAt: new Date(),
-                lastLoginAt: new Date()
+                lastLoginAt: new Date(),
+                location: apiUser.location || undefined
             };
             
             if (!user) {
@@ -228,14 +229,14 @@ class AuthService {
         }
     }
 
-    async updateProfile(name: string): Promise<User | null> {
+    async updateProfile(name: string, location?: string): Promise<User | null> {
         try {
             const token = this.getToken();
             if (!token || this.isUuidToken(token)) return null; // UUID tokens are for offline mode only
             const res = await fetch(`${API_BASE_URL}/auth/profile`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-                body: JSON.stringify({ name })
+                body: JSON.stringify({ name, location: location || '' })
             });
             if (!res.ok) return null;
             const apiUser = await res.json();
@@ -247,6 +248,7 @@ class AuthService {
                 role: 'user',
                 createdAt: new Date(),
                 lastLoginAt: new Date(),
+                location: apiUser.location || undefined,
             };
             return user;
         } catch (e) {
@@ -328,7 +330,8 @@ class AuthService {
                 name: apiUser.name,
                 isVerified: true,
                 role: 'user' as const,
-                createdAt: new Date()
+                createdAt: new Date(),
+                location: apiUser.location || undefined
             };
             localStorage.setItem('bayanihan_token', token);
 
@@ -399,6 +402,7 @@ class AuthService {
                 isVerified: true,
                 role: 'user' as const,
                 createdAt: new Date(),
+                location: apiUser.location || undefined,
             };
         } catch (error) {
             console.error('Get current user error:', error);
