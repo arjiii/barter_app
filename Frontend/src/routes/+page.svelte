@@ -194,41 +194,41 @@
 	/>
 </svelte:head>
 
-<div class="bg-slate-950 text-white">
-	<section class="relative overflow-hidden pb-24 pt-12 sm:pt-16 lg:pt-24 hero-section" use:reveal={{ threshold: 0.05 }}>
-		<div class="absolute inset-0 opacity-30 blur-3xl">
-			<div class="h-64 w-64 rounded-full bg-red-500/40 absolute -top-10 -left-16 floating-orb"></div>
-			<div class="h-72 w-72 rounded-full bg-orange-400/40 absolute top-24 right-0 floating-orb" style="animation-delay: 4s;"></div>
+<div class="bg-[#faf7f2] text-[#1f1b17] font-['Inter',sans-serif]">
+	<section class="relative overflow-hidden pb-20 pt-12 sm:pt-16 lg:pt-20 bg-gradient-to-b from-[#fff7ef] via-[#fff3e7] to-[#ffe8d8]" use:reveal={{ threshold: 0.05 }}>
+		<div class="absolute inset-0 opacity-60 blur-3xl pointer-events-none">
+			<div class="h-72 w-72 rounded-full bg-[#ffd8c2] absolute -top-16 -left-10 floating-orb"></div>
+			<div class="h-80 w-80 rounded-full bg-[#ffe9ce] absolute top-16 right-0 floating-orb" style="animation-delay: 4s;"></div>
 		</div>
 		<div class="hero-aurora hero-aurora--one"></div>
 		<div class="hero-aurora hero-aurora--two"></div>
 
 		<div class="relative max-w-6xl mx-auto px-6 lg:px-8">
-			<header class="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
+			<header class="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between text-sm text-[#564a42]">
 				<div class="flex items-center gap-3">
-					<div class="h-12 w-12 rounded-2xl bg-white/10 flex items-center justify-center">
-						<svg viewBox="0 0 24 24" class="h-6 w-6 text-red-300" fill="none" stroke="currentColor">
+					<div class="h-11 w-11 rounded-2xl bg-white shadow-sm flex items-center justify-center">
+						<svg viewBox="0 0 24 24" class="h-5 w-5 text-[#ff6d3f]" fill="none" stroke="currentColor">
 							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
 						</svg>
 					</div>
 					<div>
-						<p class="text-xs uppercase tracking-[0.5em] text-slate-400">Bayanihan Exchange</p>
-						<p class="text-sm text-slate-300">Community barter re-imagined</p>
+						<p class="text-[0.65rem] uppercase tracking-[0.4em] text-[#a18573]">Bayanihan Exchange</p>
+						<p class="text-xs text-[#7e6b5e]">Community barter re-imagined</p>
 					</div>
 				</div>
 
-				<nav class="flex flex-wrap gap-3 text-sm text-slate-300">
-					<a href="#features" class="hover:text-white transition">Features</a>
-					<a href="#how-it-works" class="hover:text-white transition">How it works</a>
-					<a href="#impact" class="hover:text-white transition">Impact</a>
-					<a href="#faq" class="hover:text-white transition">FAQ</a>
+				<nav class="flex flex-wrap gap-4 font-medium">
+					<a href="#features" class="hover:text-[#1f1b17] transition">Features</a>
+					<a href="#how-it-works" class="hover:text-[#1f1b17] transition">How it works</a>
+					<a href="#impact" class="hover:text-[#1f1b17] transition">Impact</a>
+					<a href="#faq" class="hover:text-[#1f1b17] transition">FAQ</a>
 				</nav>
 
-				<div class="flex items-center gap-3 text-sm">
-					<button class="px-4 py-2 rounded-full border border-white/30 hover:border-white transition" onclick={() => handleCta('/sign-in-up?mode=signin')}>
+				<div class="flex items-center gap-3">
+					<button class="px-4 py-2 rounded-full border border-[#d9c5b6] text-[#4a3b32] hover:bg-white transition" onclick={() => handleCta('/sign-in-up?mode=signin')}>
 						Sign in
 					</button>
-					<button class="px-4 py-2 rounded-full bg-red-500 hover:bg-red-400 font-semibold" onclick={() => handleCta('/sign-in-up?mode=signup')}>
+					<button class="px-4 py-2 rounded-full bg-[#1f1b17] text-white font-semibold hover:bg-black transition" onclick={() => handleCta('/sign-in-up?mode=signup')}>
 						Get started
 					</button>
 				</div>
@@ -236,37 +236,37 @@
 
 			<div class="mt-16 grid gap-12 lg:grid-cols-[1.1fr,0.9fr]">
 				<div class="space-y-8" use:reveal={{ threshold: 0.1 }}>
-					<div class="inline-flex items-center gap-2 rounded-full bg-white/10 px-4 py-2 text-sm text-slate-200">
-						<span class="h-2.5 w-2.5 rounded-full bg-lime-400 animate-pulse"></span>
+					<div class="inline-flex items-center gap-2 rounded-full bg-white px-4 py-2 text-sm text-[#4a3b32] shadow-sm">
+						<span class="h-2.5 w-2.5 rounded-full bg-[#3ecf8e] animate-pulse"></span>
 						Live in 132 barangays nationwide
 					</div>
 
-					<div class="space-y-6">
-						<h1 class="text-4xl font-bold leading-tight text-white sm:text-5xl lg:text-6xl animated-text">
+					<div class="space-y-5">
+						<h1 class="text-4xl font-semibold leading-tight text-[#1f1b17] sm:text-5xl lg:text-[3.2rem] animated-text">
 							Trade goods, skills, and hope—powered by blockchain trust.
 						</h1>
-						<p class="text-lg text-slate-300 max-w-2xl animated-copy">
+					<p class="text-base text-[#3d332d] max-w-2xl animated-copy">
 							Bayanihan Exchange unites neighbors, NGOs, and barangay halls in one resilient barter network.
 							Launch community drives, reroute unused goods, and track impact with transparent smart contracts.
 						</p>
 					</div>
 
 					<div class="flex flex-wrap gap-4">
-						<button class="rounded-2xl bg-red-500 px-8 py-3 text-lg font-semibold shadow-lg shadow-red-500/40 transition hover:bg-red-400 glow-button" onclick={() => handleCta('/sign-in-up?mode=signup')}>
+						<button class="rounded-full bg-[#1f1b17] px-8 py-3 text-base font-semibold text-white shadow-lg shadow-[#1f1b17]/10 transition hover:-translate-y-0.5 glow-button" onclick={() => handleCta('/sign-in-up?mode=signup')}>
 							Create free account
 						</button>
-						<button class="rounded-2xl border border-white/40 px-8 py-3 text-lg font-semibold text-white hover:border-white" onclick={() => handleCta('/sign-in-up?mode=signin')}>
+						<button class="rounded-full border border-[#cbb8a8] px-8 py-3 text-base font-semibold text-[#1f1b17] hover:bg-white" onclick={() => handleCta('/sign-in-up?mode=signin')}>
 							Sign in to existing account
 						</button>
-						<button class="rounded-2xl border border-white/20 px-8 py-3 text-lg font-semibold text-white/80 hover:text-white" onclick={() => handleCta('/discovery')}>
+						<button class="rounded-full border border-transparent bg-white px-8 py-3 text-base font-semibold text-[#4a3b32] shadow-sm hover:shadow" onclick={() => handleCta('/discovery')}>
 							Browse marketplace
 						</button>
 					</div>
 
-					<div class="flex flex-wrap gap-3 text-sm text-slate-300">
+					<div class="flex flex-wrap gap-3 text-sm text-[#67584f]">
 						{#each heroHighlights as highlight}
-							<span class="flex items-center gap-2 rounded-full border border-white/15 px-4 py-2 pulse-pill">
-								<svg viewBox="0 0 24 24" class="h-4 w-4 text-lime-300" fill="none" stroke="currentColor">
+							<span class="flex items-center gap-2 rounded-full border border-[#f0e4d9] bg-white px-4 py-2 pulse-pill">
+								<svg viewBox="0 0 24 24" class="h-4 w-4 text-[#46c58b]" fill="none" stroke="currentColor">
 									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
 								</svg>
 								{highlight}
@@ -276,8 +276,8 @@
 				</div>
 
 				<div class="space-y-6" use:reveal={{ threshold: 0.15 }}>
-					<div class="rounded-3xl bg-white/5 p-6 backdrop-blur">
-						<div class="flex justify-between text-xs uppercase tracking-[0.3em] text-slate-400">
+					<div class="rounded-3xl bg-white shadow-[0_15px_55px_rgba(15,11,8,0.08)] p-6">
+						<div class="flex justify-between text-[0.7rem] uppercase tracking-[0.35em] text-[#b19b8d]">
 							<span>Live barter board</span>
 							<span>On-chain escrow</span>
 						</div>
@@ -288,26 +288,26 @@
 								{ item: 'Surf lessons (3hrs)', want: 'Mountain bike tune-up', status: 'Offer matched' },
 								{ item: 'Desktop PC set', want: 'School chairs', status: 'Escrow funded' }
 							] as trade}
-								<div class="rounded-2xl border border-white/10 bg-slate-900/60 p-4">
-									<p class="text-sm text-slate-400">{trade.status}</p>
-									<p class="mt-2 text-lg font-semibold">{trade.item}</p>
-									<p class="text-sm text-slate-300">for {trade.want}</p>
+								<div class="rounded-2xl border border-[#f2e3d7] bg-[#fff9f4] p-4">
+									<p class="text-xs uppercase tracking-[0.3em] text-[#b19b8d]">{trade.status}</p>
+									<p class="mt-2 text-lg font-semibold text-[#1f1b17]">{trade.item}</p>
+									<p class="text-sm text-[#6f5d53]">for {trade.want}</p>
 								</div>
 							{/each}
 						</div>
 
-						<div class="mt-6 rounded-2xl bg-gradient-to-r from-red-500 to-orange-400 p-4 text-sm font-semibold text-white">
+						<div class="mt-6 rounded-2xl bg-gradient-to-r from-[#ffb997] to-[#ff8e72] p-4 text-sm font-semibold text-white shadow-inner">
 							Barangay 87 activated a relief drive · 156 pledges secured
 						</div>
 					</div>
 
-					<div class="grid gap-4 sm:grid-cols-3 text-center text-sm text-slate-300">
+					<div class="grid gap-4 sm:grid-cols-3 text-center text-sm text-[#6f5d53]">
 						{#each stats as stat}
-							<div class="rounded-2xl border border-white/10 bg-white/5 px-4 py-6">
-								<p class="text-2xl font-semibold text-white">{stat.value}</p>
-								<p class="mt-1 font-medium uppercase tracking-wide text-xs text-slate-400">{stat.label}</p>
+							<div class="rounded-2xl border border-[#f0e4d9] bg-white px-4 py-6 shadow">
+								<p class="text-2xl font-semibold text-[#1f1b17]">{stat.value}</p>
+								<p class="mt-1 font-medium uppercase tracking-wide text-[0.65rem] text-[#a48774]">{stat.label}</p>
 								{#if stat.subtext}
-									<p class="mt-1 text-slate-400">{stat.subtext}</p>
+									<p class="mt-1 text-[#8f7a6c]">{stat.subtext}</p>
 								{/if}
 							</div>
 						{/each}
@@ -315,11 +315,11 @@
 				</div>
 			</div>
 
-			<div class="mt-16 flex flex-wrap items-center gap-4 text-xs uppercase text-slate-500">
-				<span class="text-slate-400">Partnered with</span>
-				<div class="flex flex-wrap gap-4">
+			<div class="mt-16 flex flex-wrap items-center gap-4 text-[0.7rem] uppercase text-[#9c8779] tracking-[0.2em]">
+				<span class="text-[#b0998a]">Partnered with</span>
+				<div class="flex flex-wrap gap-3">
 					{#each partnerLogos as partner}
-						<span class="rounded-full border border-white/10 px-4 py-2 text-slate-300">{partner}</span>
+						<span class="rounded-full border border-[#f0e4d9] bg-white px-4 py-2 text-[#615149] text-xs">{partner}</span>
 					{/each}
 				</div>
 			</div>
@@ -331,14 +331,14 @@
 		</div>
 	</section>
 
-	<section id="features" class="border-t border-white/5 bg-slate-900 py-20" use:reveal={{ threshold: 0.05 }}>
+	<section id="features" class="border-t border-[#f0e4d9] bg-[#fffaf4] py-20" use:reveal={{ threshold: 0.05 }}>
 		<div class="mx-auto max-w-6xl px-6 lg:px-8">
 			<div class="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
 				<div>
-					<p class="text-sm uppercase tracking-[0.5em] text-red-300 animated-copy">Why Bayanihan</p>
-					<h2 class="mt-2 text-3xl font-bold text-white sm:text-4xl animated-text">Purpose-built for community barter.</h2>
+					<p class="text-xs uppercase tracking-[0.5em] text-[#ff8e72] animated-copy">Why Bayanihan</p>
+					<h2 class="mt-2 text-3xl font-semibold text-[#1f1b17] sm:text-4xl animated-text">Purpose-built for community barter.</h2>
 				</div>
-				<p class="text-slate-300 max-w-xl animated-copy">
+				<p class="text-[#3c312a] max-w-xl animated-copy">
 					Every capability comes from months of co-design with barangay captains, disaster response units, and grassroots entrepreneurs.
 				</p>
 			</div>
@@ -346,83 +346,83 @@
 			<div class="mt-12 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
 				{#each features as feature, index}
 					<article
-						class="rounded-3xl border border-white/5 bg-slate-950/60 p-6 shadow-inner shadow-black/30 card-hover"
+						class="rounded-3xl border border-[#f3e5d9] bg-white p-6 shadow-sm card-hover"
 						use:reveal={{ delay: index * 60 }}
 					>
 						<div class="flex items-center gap-3">
-							<div class="rounded-2xl bg-white/5 p-3 text-red-300">
+							<div class="rounded-2xl bg-[#fff3ea] p-3 text-[#ff6d3f]">
 								<svg viewBox="0 0 24 24" class="h-6 w-6" fill="none" stroke="currentColor">
 									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d={feature.icon} />
 								</svg>
 							</div>
 							{#if feature.badge}
-								<span class="rounded-full bg-red-500/20 px-3 py-1 text-xs font-semibold text-red-200">{feature.badge}</span>
+								<span class="rounded-full bg-[#ffe1d2] px-3 py-1 text-xs font-semibold text-[#b25f3b]">{feature.badge}</span>
 							{/if}
 						</div>
-						<h3 class="mt-6 text-xl font-semibold text-white">{feature.title}</h3>
-						<p class="mt-3 text-slate-300">{feature.description}</p>
+						<h3 class="mt-6 text-xl font-semibold text-[#211c18]">{feature.title}</h3>
+						<p class="mt-3 text-[#4b3f37]">{feature.description}</p>
 					</article>
 				{/each}
 			</div>
 		</div>
 	</section>
 
-	<section id="how-it-works" class="bg-gradient-to-b from-slate-900 to-slate-950 py-20" use:reveal={{ threshold: 0.05 }}>
+	<section id="how-it-works" class="bg-gradient-to-b from-[#fffaf4] to-[#f9ede3] py-20" use:reveal={{ threshold: 0.05 }}>
 		<div class="mx-auto max-w-6xl px-6 lg:px-8">
 			<div class="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
 				<div>
-					<p class="text-sm uppercase tracking-[0.5em] text-orange-300 animated-copy">How it works</p>
-					<h2 class="mt-2 text-3xl font-bold text-white sm:text-4xl animated-text">3 steps to your next swap.</h2>
-					<p class="mt-4 text-slate-300 max-w-2xl animated-copy">
+					<p class="text-xs uppercase tracking-[0.5em] text-[#ff8e72] animated-copy">How it works</p>
+					<h2 class="mt-2 text-3xl font-semibold text-[#1f1b17] sm:text-4xl animated-text">3 steps to your next swap.</h2>
+					<p class="mt-4 text-[#6f5d53] max-w-2xl animated-copy">
 						Built for barangay hall workflows—no crypto wallets required. We abstract the blockchain jargon so your focus stays on people.
 					</p>
 				</div>
-				<button class="rounded-full border border-white/20 px-5 py-3 text-sm font-semibold text-white hover:border-white" onclick={() => handleCta('/sign-in-up?mode=signup')}>
+				<button class="rounded-full border border-[#e5d5c9] px-5 py-3 text-sm font-semibold text-[#1f1b17] hover:bg-white" onclick={() => handleCta('/sign-in-up?mode=signup')}>
 					Create free account
 				</button>
 			</div>
 
 			<div class="mt-12 grid gap-6 lg:grid-cols-3">
 				{#each steps as step, index}
-					<div class="rounded-3xl border border-white/10 bg-slate-950/60 p-6 card-hover" use:reveal={{ delay: index * 80 }}>
+					<div class="rounded-3xl border border-[#f0e4d9] bg-white p-6 card-hover" use:reveal={{ delay: index * 80 }}>
 						<div class="flex items-center justify-between">
-							<span class="text-sm uppercase tracking-[0.5em] text-slate-500">Step {index + 1}</span>
-							<span class="rounded-full bg-white/10 px-3 py-1 text-xs text-white">{step.action}</span>
+							<span class="text-xs uppercase tracking-[0.5em] text-[#b19b8d]">Step {index + 1}</span>
+							<span class="rounded-full bg-[#fff3ea] px-3 py-1 text-xs text-[#a45b3c]">{step.action}</span>
 						</div>
-						<h3 class="mt-4 text-2xl font-semibold text-white">{step.title}</h3>
-						<p class="mt-3 text-slate-300">{step.body}</p>
+						<h3 class="mt-4 text-2xl font-semibold text-[#201b17]">{step.title}</h3>
+						<p class="mt-3 text-[#463b34]">{step.body}</p>
 					</div>
 				{/each}
 			</div>
 		</div>
 	</section>
 
-	<section id="impact" class="border-t border-white/5 bg-slate-950 py-20">
+	<section id="impact" class="border-t border-[#f0e4d9] bg-[#fff8f1] py-20">
 		<div class="mx-auto max-w-6xl px-6 lg:px-8">
 			<div class="grid gap-12 lg:grid-cols-[1.1fr,0.9fr]">
 				<div class="space-y-6" use:reveal={{ threshold: 0.15 }}>
-					<p class="text-sm uppercase tracking-[0.5em] text-lime-300 animated-copy">Impact in motion</p>
-					<h2 class="text-3xl font-bold text-white sm:text-4xl animated-text">Data your city hall will love.</h2>
-					<p class="text-slate-300 animated-copy">
+					<p class="text-xs uppercase tracking-[0.5em] text-[#46c58b] animated-copy">Impact in motion</p>
+					<h2 class="text-3xl font-semibold text-[#1f1b17] sm:text-4xl animated-text">Data your city hall will love.</h2>
+					<p class="text-[#3c312a] animated-copy">
 						Every barter automatically logs environmental savings, economic value, and volunteer hours. Export-ready dashboards help barangays secure funding faster.
 					</p>
 
 					<div class="grid gap-4 sm:grid-cols-2">
-						<div class="rounded-3xl border border-white/10 bg-slate-900/70 p-5 stat-card">
-							<p class="text-xs uppercase tracking-[0.4em] text-slate-500">Relief drives this month</p>
-							<p class="mt-3 text-4xl font-semibold text-white">42</p>
-							<p class="text-sm text-slate-400">12,800 beneficiaries & counting</p>
+						<div class="rounded-3xl border border-[#e6d8cb] bg-white p-5 stat-card">
+							<p class="text-[0.65rem] uppercase tracking-[0.4em] text-[#897363]">Relief drives this month</p>
+							<p class="mt-3 text-4xl font-semibold text-[#1b1613]">42</p>
+							<p class="text-sm text-[#4f433b]">12,800 beneficiaries & counting</p>
 						</div>
-						<div class="rounded-3xl border border-white/10 bg-slate-900/70 p-5 stat-card">
-							<p class="text-xs uppercase tracking-[0.4em] text-slate-500">Goods upcycled</p>
-							<p class="mt-3 text-4xl font-semibold text-white">68%</p>
-							<p class="text-sm text-slate-400">increase vs. last quarter</p>
+						<div class="rounded-3xl border border-[#e6d8cb] bg-white p-5 stat-card">
+							<p class="text-[0.65rem] uppercase tracking-[0.4em] text-[#897363]">Goods upcycled</p>
+							<p class="mt-3 text-4xl font-semibold text-[#1b1613]">68%</p>
+							<p class="text-sm text-[#4f433b]">increase vs. last quarter</p>
 						</div>
 					</div>
 
-					<div class="rounded-3xl bg-gradient-to-r from-lime-500/20 to-sky-500/20 p-6 text-sm text-slate-100">
-						<div class="flex items-center gap-3">
-							<div class="h-10 w-10 rounded-2xl bg-white/20 flex items-center justify-center text-lime-300">
+					<div class="rounded-3xl bg-gradient-to-r from-[#e7fde4] to-[#e7f5ff] p-6 text-sm text-[#355a3f]">
+						<div class="flex items-center gap-3 text-[#2c241f]">
+							<div class="h-10 w-10 rounded-2xl bg-white flex items-center justify-center text-[#46c58b] shadow">
 								<svg viewBox="0 0 24 24" class="h-5 w-5" fill="none" stroke="currentColor">
 									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
 								</svg>
@@ -435,36 +435,36 @@
 				</div>
 
 				<div class="space-y-6" use:reveal={{ threshold: 0.15, delay: 150 }}>
-					<div class="rounded-3xl border border-white/10 bg-slate-900/50 p-6">
-					<p class="text-sm uppercase tracking-[0.5em] text-orange-300 animated-copy">Testimonials</p>
+					<div class="rounded-3xl border border-[#f0e4d9] bg-white p-6 shadow-sm">
+					<p class="text-xs uppercase tracking-[0.5em] text-[#ff8e72] animated-copy">Testimonials</p>
 						<div class="mt-6 space-y-6">
 							{#each testimonials as testimonial}
-								<blockquote class="rounded-2xl bg-slate-950/70 p-5 border border-white/5">
-									<p class="text-slate-100">“{testimonial.quote}”</p>
-									<footer class="mt-4 text-sm text-slate-400">
-										<strong class="text-white">{testimonial.author}</strong> · {testimonial.role}
+								<blockquote class="rounded-2xl bg-[#fff7ef] p-5 border border-[#f4dfd0]">
+									<p class="text-[#4a3b32]">“{testimonial.quote}”</p>
+									<footer class="mt-4 text-sm text-[#967e6c]">
+										<strong class="text-[#1f1b17]">{testimonial.author}</strong> · {testimonial.role}
 									</footer>
 								</blockquote>
 							{/each}
 						</div>
 					</div>
 
-					<div class="rounded-3xl border border-white/10 bg-slate-900/70 p-6 card-hover">
-					<p class="text-sm uppercase tracking-[0.5em] text-slate-400 animated-copy">Community spotlight</p>
-						<div class="mt-4 space-y-4 text-sm text-slate-300">
-							<div class="flex items-center justify-between rounded-2xl bg-white/5 p-4">
+					<div class="rounded-3xl border border-[#f0e4d9] bg-white p-6 card-hover">
+					<p class="text-xs uppercase tracking-[0.5em] text-[#b19b8d] animated-copy">Community spotlight</p>
+						<div class="mt-4 space-y-4 text-sm text-[#6f5d53]">
+							<div class="flex items-center justify-between rounded-2xl bg-[#fff7ef] p-4">
 								<div>
-									<p class="font-semibold text-white">Quezon City Bike Library</p>
-									<p class="text-slate-400">62 bikes donated · 180 riders served</p>
+									<p class="font-semibold text-[#1a1512]">Quezon City Bike Library</p>
+									<p class="text-[#5a4b42]">62 bikes donated · 180 riders served</p>
 								</div>
-								<span class="rounded-full bg-lime-400/20 px-3 py-1 text-xs text-lime-200">ACTIVE</span>
+								<span class="rounded-full bg-[#d3f9d8] px-3 py-1 text-xs text-[#297f4f]">ACTIVE</span>
 							</div>
-							<div class="flex items-center justify-between rounded-2xl bg-white/5 p-4">
+							<div class="flex items-center justify-between rounded-2xl bg-[#fff7ef] p-4">
 								<div>
-									<p class="font-semibold text-white">Visayas Classroom Refresh</p>
-									<p class="text-slate-400">208 chairs · 93 desks matched</p>
+									<p class="font-semibold text-[#1a1512]">Visayas Classroom Refresh</p>
+									<p class="text-[#5a4b42]">208 chairs · 93 desks matched</p>
 								</div>
-								<span class="rounded-full bg-orange-400/20 px-3 py-1 text-xs text-orange-200">IN PROGRESS</span>
+								<span class="rounded-full bg-[#ffe1cc] px-3 py-1 text-xs text-[#b65c34]">IN PROGRESS</span>
 							</div>
 						</div>
 					</div>
@@ -473,20 +473,20 @@
 		</div>
 	</section>
 
-	<section id="faq" class="border-t border-white/5 bg-slate-900 py-20" use:reveal={{ threshold: 0.05 }}>
+	<section id="faq" class="border-t border-[#f0e4d9] bg-[#fffaf4] py-20" use:reveal={{ threshold: 0.05 }}>
 		<div class="mx-auto max-w-6xl px-6 lg:px-8">
 			<div class="grid gap-10 lg:grid-cols-[0.8fr,1.2fr]">
 				<div use:reveal={{ threshold: 0.1 }}>
-					<p class="text-sm uppercase tracking-[0.5em] text-slate-400 animated-copy">Questions?</p>
-					<h2 class="mt-3 text-3xl font-bold text-white animated-text">We’re here for every barangay leader.</h2>
-					<p class="mt-4 text-slate-300 animated-copy">
+					<p class="text-xs uppercase tracking-[0.5em] text-[#b19b8d] animated-copy">Questions?</p>
+					<h2 class="mt-3 text-3xl font-semibold text-[#1f1b17] animated-text">We’re here for every barangay leader.</h2>
+					<p class="mt-4 text-[#6f5d53] animated-copy">
 						Not sure how to kickstart your barter hub? Book a 15-minute onboarding with our community playbook team.
 					</p>
-					<div class="mt-6 flex flex-wrap gap-3 text-sm text-slate-300">
-						<button class="rounded-2xl border border-white/20 px-6 py-3 font-semibold hover:border-white" onclick={() => handleCta('/sign-in-up?mode=signup')}>
+					<div class="mt-6 flex flex-wrap gap-3 text-sm text-[#4a3b32]">
+						<button class="rounded-2xl border border-[#e5d5c9] px-6 py-3 font-semibold hover:bg-white" onclick={() => handleCta('/sign-in-up?mode=signup')}>
 							Schedule onboarding
 						</button>
-						<button class="rounded-2xl bg-white/10 px-6 py-3 font-semibold hover:bg-white/20" onclick={() => handleCta('/help')}>
+						<button class="rounded-2xl bg-[#1f1b17] text-white px-6 py-3 font-semibold hover:bg-black" onclick={() => handleCta('/help')}>
 							Visit help center
 						</button>
 					</div>
@@ -494,9 +494,9 @@
 
 				<div class="space-y-4">
 					{#each faqs as faq, index}
-						<details class="rounded-2xl border border-white/10 bg-slate-950/70 p-5" use:reveal={{ delay: index * 60 }}>
-							<summary class="cursor-pointer text-lg font-semibold text-white">{faq.question}</summary>
-							<p class="mt-3 text-slate-300">{faq.answer}</p>
+						<details class="rounded-2xl border border-[#f0e4d9] bg-white p-5" use:reveal={{ delay: index * 60 }}>
+							<summary class="cursor-pointer text-lg font-semibold text-[#1f1b17]">{faq.question}</summary>
+							<p class="mt-3 text-[#6f5d53]">{faq.answer}</p>
 						</details>
 					{/each}
 				</div>
@@ -504,17 +504,17 @@
 		</div>
 	</section>
 
-	<section class="border-t border-white/5 bg-gradient-to-r from-red-600 via-orange-500 to-rose-500 py-16" use:reveal={{ threshold: 0.05 }}>
-		<div class="mx-auto flex max-w-5xl flex-col gap-8 px-6 text-center text-white lg:px-8">
-			<h2 class="text-3xl font-bold sm:text-4xl animated-text">Ready to relaunch barter culture in your community?</h2>
-			<p class="text-lg text-white/90 animated-copy">
+	<section class="border-t border-[#f0e4d9] bg-gradient-to-r from-[#ffe9d9] via-[#ffdac5] to-[#ffc6b8] py-16" use:reveal={{ threshold: 0.05 }}>
+		<div class="mx-auto flex max-w-5xl flex-col gap-8 px-6 text-center text-[#1f1b17] lg:px-8">
+			<h2 class="text-3xl font-semibold sm:text-4xl animated-text">Ready to relaunch barter culture in your community?</h2>
+			<p class="text-base text-[#5d4c44] animated-copy">
 				Spin up your first campaign in minutes, invite neighbors with magic links, and monitor every impact metric from one dashboard.
 			</p>
 			<div class="flex flex-wrap justify-center gap-4">
-				<button class="rounded-2xl bg-white px-8 py-3 text-lg font-semibold text-red-600" onclick={() => handleCta('/sign-in-up?mode=signup')}>
+				<button class="rounded-full bg-[#1f1b17] px-8 py-3 text-base font-semibold text-white hover:bg-black" onclick={() => handleCta('/sign-in-up?mode=signup')}>
 					Start free
 				</button>
-				<button class="rounded-2xl border border-white px-8 py-3 text-lg font-semibold" onclick={() => handleCta('/discovery')}>
+				<button class="rounded-full border border-[#1f1b17] px-8 py-3 text-base font-semibold text-[#1f1b17] hover:bg-[#1f1b17] hover:text-white transition" onclick={() => handleCta('/discovery')}>
 					Explore live trades
 				</button>
 			</div>
@@ -524,7 +524,7 @@
 
 <style>
 	:global(.animated-text) {
-		background-image: linear-gradient(120deg, #ffffff 0%, #fbbf24 40%, #f87171 60%, #ffffff 100%);
+		background-image: linear-gradient(120deg, #7c4a3f 0%, #ff9f7e 50%, #d86a3f 100%);
 		background-size: 200% auto;
 		-webkit-background-clip: text;
 		-webkit-text-fill-color: transparent;
@@ -532,45 +532,41 @@
 	}
 
 	:global(.animated-copy) {
-		color: rgba(226, 232, 240, 0.85);
+		color: rgba(92, 79, 71, 0.9);
 		animation: copyBreathe 6s ease-in-out infinite;
 	}
 
 	@keyframes textGlow {
 		0% {
 			background-position: 0% 50%;
-			filter: drop-shadow(0 0 0 rgba(248, 113, 113, 0));
+			filter: drop-shadow(0 0 0 rgba(216, 106, 63, 0));
 		}
 		50% {
 			background-position: 100% 50%;
-			filter: drop-shadow(0 8px 20px rgba(248, 113, 113, 0.35));
+			filter: drop-shadow(0 8px 20px rgba(216, 106, 63, 0.25));
 		}
 		100% {
 			background-position: 0% 50%;
-			filter: drop-shadow(0 0 0 rgba(248, 113, 113, 0));
+			filter: drop-shadow(0 0 0 rgba(216, 106, 63, 0));
 		}
 	}
 
 	@keyframes copyBreathe {
 		0%,
 		100% {
-			color: rgba(226, 232, 240, 0.75);
+			color: rgba(92, 79, 71, 0.75);
 		}
 		50% {
-			color: rgba(248, 250, 252, 0.95);
+			color: rgba(41, 31, 28, 0.9);
 		}
-	}
-
-	:global(.hero-section) {
-		background: radial-gradient(circle at top, rgba(255, 255, 255, 0.05), transparent 45%);
 	}
 
 	:global(.hero-aurora) {
 		position: absolute;
 		width: 60%;
 		height: 60%;
-		filter: blur(120px);
-		opacity: 0.35;
+		filter: blur(140px);
+		opacity: 0.45;
 		z-index: 0;
 		animation: auroraShift 18s ease-in-out infinite alternate;
 	}
@@ -578,13 +574,13 @@
 	:global(.hero-aurora--one) {
 		top: -20%;
 		left: -10%;
-		background: radial-gradient(circle, rgba(239, 68, 68, 0.6), transparent 60%);
+		background: radial-gradient(circle, rgba(255, 215, 197, 0.8), transparent 60%);
 	}
 
 	:global(.hero-aurora--two) {
 		bottom: -30%;
 		right: -20%;
-		background: radial-gradient(circle, rgba(249, 115, 22, 0.6), transparent 60%);
+		background: radial-gradient(circle, rgba(255, 231, 196, 0.8), transparent 60%);
 		animation-delay: 6s;
 	}
 
@@ -661,7 +657,7 @@
 		width: 30px;
 		height: 30px;
 		border-radius: 999px;
-		border: 1px solid rgba(255, 255, 255, 0.3);
+		border: 1px solid rgba(31, 27, 23, 0.3);
 		position: relative;
 	}
 
@@ -698,8 +694,8 @@
 
 	:global(.card-hover:hover) {
 		transform: translateY(-6px);
-		border-color: rgba(248, 250, 252, 0.4);
-		box-shadow: 0 15px 40px rgba(15, 23, 42, 0.7);
+		border-color: rgba(255, 149, 109, 0.4);
+		box-shadow: 0 20px 40px rgba(31, 27, 23, 0.12);
 	}
 
 	:global(.stat-card) {

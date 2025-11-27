@@ -139,36 +139,37 @@
 	});
 </script>
 
-<div class="min-h-screen bg-red-600 flex">
+<div class="min-h-screen bg-[#f7f5f3] flex font-['Inter',sans-serif] text-[#1c1816]">
 	<!-- Left Side - Welcome Section -->
-	<div class="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-red-500 to-red-700 flex-col justify-center px-12 text-white">
+	<div class="hidden lg:flex lg:w-5/12 bg-gradient-to-br from-[#fbe4d5] via-[#f7d2c3] to-[#f7c9b6] flex-col justify-center px-12 py-16 text-[#43291b] border-r border-[#f1d5c6]">
 		<!-- Logo -->
 		<div class="mb-8">
-			<div class="w-12 h-12 bg-white rounded-lg flex items-center justify-center mb-4">
-				<svg class="h-8 w-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+			<div class="w-11 h-11 bg-white/90 rounded-full flex items-center justify-center mb-4 shadow-sm">
+				<svg class="h-6 w-6 text-[#ff6d3f]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 					<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
 				</svg>
 			</div>
-			<h1 class="text-3xl font-bold">Bayanihan Exchange</h1>
-			<p class="text-red-100 text-sm">Blockchain-Powered Community Barter</p>
+			<h1 class="text-2xl font-semibold tracking-tight">Bayanihan Exchange</h1>
+			<p class="text-[#674c3b] text-sm">Blockchain-Powered Community Barter</p>
 		</div>
 
 		<!-- Welcome Content -->
-		<div class="max-w-md">
-		<h2 class="text-4xl font-bold mb-4">
-			{formState.isSignUp ? 'Join our Bayanihan Community' : 'Welcome back, Kabayan!'}
-		</h2>
-		<p class="text-lg text-red-100 mb-8">
-			{formState.isSignUp ? 'Start your journey with us and join our community of neighbors helping neighbors through blockchain-powered bartering.' : 'Continue your journey in our community where neighbors help neighbors through secure blockchain trading.'}
-		</p>
-		
-		<button 
-			type="button" 
-			onclick={toggleMode}
-			class="bg-white text-red-600 px-6 py-3 rounded-lg font-semibold hover:bg-red-50 transition-colors duration-200"
-		>
-			{formState.isSignUp ? 'Already have an account? Sign in' : 'New to Bayanihan? Sign up'}
-		</button>
+		<div class="max-w-md space-y-6">
+			<h2 class="text-3xl font-semibold leading-tight">
+				{formState.isSignUp ? 'Join our Bayanihan Community' : 'Welcome back, Kabayan!'}
+			</h2>
+			<p class="text-base text-[#6c4d3a]">
+				{formState.isSignUp ? 'Start your journey with us and join our community of neighbors helping neighbors through blockchain-powered bartering.' : 'Continue your journey in our community where neighbors help neighbors through secure blockchain trading.'}
+			</p>
+			
+			<button 
+				type="button" 
+				onclick={toggleMode}
+				class="inline-flex items-center gap-2 bg-white/90 text-[#ff6d3f] px-5 py-2.5 rounded-full font-semibold shadow-sm hover:bg-white transition-colors duration-200"
+			>
+				<span>{formState.isSignUp ? 'Already have an account? Sign in' : 'New to Bayanihan? Sign up'}</span>
+				<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5-5 5M6 12h12"/></svg>
+			</button>
 		</div>
 
 		<!-- Illustration Area -->
@@ -208,29 +209,29 @@
 	</div>
 
 	<!-- Right Side - Form Section -->
-	<div class="w-full lg:w-1/2 bg-white flex flex-col justify-center px-8 py-12">
+	<div class="w-full lg:w-7/12 bg-[#fffdfb] flex flex-col justify-center px-6 sm:px-10 py-10">
 		<!-- Mobile Logo -->
 		<div class="lg:hidden mb-8 text-center">
-			<div class="w-12 h-12 bg-red-600 rounded-lg flex items-center justify-center mx-auto mb-4">
-				<svg class="h-8 w-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+			<div class="w-11 h-11 bg-[#ff6d3f] rounded-full flex items-center justify-center mx-auto mb-3 shadow-sm">
+				<svg class="h-6 w-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 					<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
 				</svg>
 			</div>
-			<h1 class="text-2xl font-bold text-gray-900">Bayanihan Exchange</h1>
-			<p class="text-sm text-gray-600">Blockchain-Powered Community Barter</p>
+			<h1 class="text-xl font-semibold text-[#201915] tracking-tight">Bayanihan Exchange</h1>
+			<p class="text-xs text-[#6f5d53] uppercase tracking-[0.2em]">Community barter</p>
 		</div>
 
 		<div class="max-w-md mx-auto w-full">
-			<div class="text-center mb-8">
-				<h2 class="text-2xl font-bold text-gray-900 mb-2">
+			<div class="text-center mb-6">
+				<h2 class="text-[1.65rem] font-semibold text-[#1f1b17] mb-2 tracking-tight">
 					{formState.isSignUp ? 'Create Account' : 'Sign In'}
 				</h2>
-				<p class="text-gray-600">
+				<p class="text-sm text-[#6c6b69]">
 					{formState.isSignUp ? 'Join the Bayanihan community today' : 'Welcome back to Bayanihan Exchange'}
 				</p>
 			</div>
 
-			<div class="bg-white py-8 px-6 rounded-2xl shadow-lg border border-gray-100">
+			<div class="bg-white/95 py-7 px-6 rounded-2xl border border-[#f0e4d8] shadow-[0_10px_40px_rgba(31,24,22,0.08)]">
 				<!-- Error Message -->
 				{#if formState.errors.general}
 					<div class="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded-lg">
@@ -238,10 +239,10 @@
 					</div>
 				{/if}
 
-				<form class="space-y-6" onsubmit={handleSubmit}>
+				<form class="space-y-5" onsubmit={handleSubmit}>
 					{#if formState.isSignUp}
 						<div>
-							<label for="name" class="block text-sm font-medium text-gray-700 mb-2">
+						<label for="name" class="block text-xs uppercase tracking-[0.2em] text-[#8b6b55] mb-2">
 								Full Name
 							</label>
 							<input
@@ -249,7 +250,7 @@
 								name="name"
 								type="text"
 								bind:value={formData.name}
-								class="w-full px-4 py-3 border {formState.errors.name ? 'border-red-500' : 'border-gray-300'} rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-colors"
+								class="w-full px-4 py-3 border {formState.errors.name ? 'border-[#f9735b]' : 'border-[#e3d8cf]'} rounded-xl bg-[#fdf9f6] focus:outline-none focus:ring-2 focus:ring-[#ffb797] focus:border-[#ff855a] transition-colors text-[#2d261f]"
 								placeholder="Enter your full name"
 							/>
 							{#if formState.errors.name}
@@ -259,7 +260,7 @@
 					{/if}
 
 					<div>
-						<label for="email" class="block text-sm font-medium text-gray-700 mb-2">
+						<label for="email" class="block text-xs uppercase tracking-[0.2em] text-[#8b6b55] mb-2">
 							Email Address
 						</label>
 						<input
@@ -268,7 +269,7 @@
 							type="email"
 							autocomplete="email"
 							bind:value={formData.email}
-							class="w-full px-4 py-3 border {formState.errors.email ? 'border-red-500' : 'border-gray-300'} rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-colors"
+							class="w-full px-4 py-3 border {formState.errors.email ? 'border-[#f9735b]' : 'border-[#e3d8cf]'} rounded-xl bg-[#fdf9f6] focus:outline-none focus:ring-2 focus:ring-[#ffb797] focus:border-[#ff855a] transition-colors text-[#2d261f]"
 							placeholder="Enter your email address"
 						/>
 						{#if formState.errors.email}
@@ -277,7 +278,7 @@
 					</div>
 
 					<div>
-						<label for="password" class="block text-sm font-medium text-gray-700 mb-2">
+						<label for="password" class="block text-xs uppercase tracking-[0.2em] text-[#8b6b55] mb-2">
 							Password
 						</label>
 						<div class="relative">
@@ -287,7 +288,7 @@
 								type={showPassword ? 'text' : 'password'}
 								autocomplete={formState.isSignUp ? "new-password" : "current-password"}
 								bind:value={formData.password}
-								class="w-full pr-12 px-4 py-3 border {formState.errors.password ? 'border-red-500' : 'border-gray-300'} rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-colors"
+								class="w-full pr-12 px-4 py-3 border {formState.errors.password ? 'border-[#f9735b]' : 'border-[#e3d8cf]'} rounded-xl bg-[#fdf9f6] focus:outline-none focus:ring-2 focus:ring-[#ffb797] focus:border-[#ff855a] transition-colors text-[#2d261f]"
 								placeholder="Password"
 							/>
 							<button type="button" class="absolute inset-y-0 right-3 my-auto text-gray-500 hover:text-gray-700" onclick={() => showPassword = !showPassword} aria-label={showPassword ? 'Hide password' : 'Show password'}>
@@ -305,7 +306,7 @@
 
 					{#if formState.isSignUp}
 						<div>
-							<label for="confirm-password" class="block text-sm font-medium text-gray-700 mb-2">
+						<label for="confirm-password" class="block text-xs uppercase tracking-[0.2em] text-[#8b6b55] mb-2">
 								Confirm Password
 							</label>
 							<div class="relative">
@@ -315,7 +316,7 @@
 									type={showConfirmPassword ? 'text' : 'password'}
 									autocomplete="new-password"
 									bind:value={formData.confirmPassword}
-									class="w-full pr-12 px-4 py-3 border {formState.errors.confirmPassword ? 'border-red-500' : 'border-gray-300'} rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-colors"
+									class="w-full pr-12 px-4 py-3 border {formState.errors.confirmPassword ? 'border-[#f9735b]' : 'border-[#e3d8cf]'} rounded-xl bg-[#fdf9f6] focus:outline-none focus:ring-2 focus:ring-[#ffb797] focus:border-[#ff855a] transition-colors text-[#2d261f]"
 									placeholder="Confirm your password"
 								/>
 								<button type="button" class="absolute inset-y-0 right-3 my-auto text-gray-500 hover:text-gray-700" onclick={() => showConfirmPassword = !showConfirmPassword} aria-label={showConfirmPassword ? 'Hide password' : 'Show password'}>
@@ -333,22 +334,22 @@
 					{/if}
 
 					{#if !formState.isSignUp}
-						<div class="flex items-center justify-between">
+						<div class="flex items-center justify-between text-sm">
 							<div class="flex items-center">
 								<input
 									id="remember-me"
 									name="remember-me"
 									type="checkbox"
 									bind:checked={formData.rememberMe}
-									class="h-4 w-4 text-red-600 focus:ring-red-500 border-gray-300 rounded"
+									class="h-4 w-4 text-[#ff6d3f] focus:ring-[#ffb797] border-[#d9c7ba] rounded"
 								/>
-								<label for="remember-me" class="ml-2 block text-sm text-gray-900">
+								<label for="remember-me" class="ml-2 text-[#4d4138]">
 									Remember me
 								</label>
 							</div>
 
-							<div class="text-sm">
-								<button type="button" class="font-medium text-red-600 hover:text-red-500 transition-colors">
+							<div>
+								<button type="button" class="font-medium text-[#ff6d3f] hover:text-[#ff5724] transition-colors">
 									Forgot Password?
 								</button>
 							</div>
@@ -359,7 +360,7 @@
 						<button
 							type="submit"
 							disabled={formState.isLoading}
-							class="w-full bg-red-600 text-white py-3 px-4 rounded-lg font-semibold hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
+							class="w-full bg-[#1f1b17] text-white py-3 px-4 rounded-xl font-semibold tracking-wide hover:bg-black focus:outline-none focus:ring-2 focus:ring-[#c6b4a6] focus:ring-offset-2 focus:ring-offset-white disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
 						>
 							{#if formState.isLoading}
 								<svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white inline" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -369,31 +370,31 @@
 							{/if}
 							{formState.isLoading ? 'Processing...' : (formState.isSignUp ? 'SIGN UP' : 'SIGN IN')}
 						</button>
-						<p class="mt-3 text-center text-sm text-gray-600">
+						<p class="mt-3 text-center text-sm text-[#6c6b69]">
 							{formState.isSignUp ? 'Already have an account?' : "Don't have an account?"}
-							<button type="button" class="ml-1 text-red-600 hover:text-red-700 font-medium" onclick={toggleMode}>
+							<button type="button" class="ml-1 text-[#ff6d3f] hover:text-[#ff5724] font-medium" onclick={toggleMode}>
 								{formState.isSignUp ? 'Sign in' : 'Sign up'}
 							</button>
 						</p>
 					</div>
 				</form>
 
-				<div class="mt-6">
+				<div class="mt-5">
 					<div class="relative">
 						<div class="absolute inset-0 flex items-center">
 							<div class="w-full border-t border-gray-300"></div>
 						</div>
 						<div class="relative flex justify-center text-sm">
-							<span class="px-2 bg-white text-gray-500">Or connect with</span>
+							<span class="px-2 bg-white text-[#8a7c72] text-xs uppercase tracking-[0.3em]">Or connect</span>
 						</div>
 					</div>
 
-					<div class="mt-6 grid grid-cols-3 gap-3">
+					<div class="mt-5 grid grid-cols-3 gap-3">
 						<button
 							type="button"
 							onclick={() => handleSocialLogin('google')}
 							disabled={formState.isLoading}
-							class="w-full inline-flex justify-center py-3 px-4 border border-gray-300 rounded-lg shadow-sm bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 hover:border-gray-400 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+							class="w-full inline-flex justify-center py-3 px-4 border border-[#dfd4cb] rounded-xl bg-white/90 text-sm font-medium text-[#4b433d] hover:bg-white transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
 							aria-label="Sign in with Google"
 						>
 							<svg class="h-5 w-5" viewBox="0 0 24 24">
@@ -408,7 +409,7 @@
 							type="button"
 							onclick={() => handleSocialLogin('apple')}
 							disabled={formState.isLoading}
-							class="w-full inline-flex justify-center py-3 px-4 border border-gray-300 rounded-lg shadow-sm bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 hover:border-gray-400 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+							class="w-full inline-flex justify-center py-3 px-4 border border-[#dfd4cb] rounded-xl bg-white/90 text-sm font-medium text-[#4b433d] hover:bg-white transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
 							aria-label="Sign in with Apple"
 						>
 							<svg class="h-5 w-5" fill="currentColor" viewBox="0 0 24 24">
@@ -420,7 +421,7 @@
 							type="button"
 							onclick={() => handleSocialLogin('facebook')}
 							disabled={formState.isLoading}
-							class="w-full inline-flex justify-center py-3 px-4 border border-gray-300 rounded-lg shadow-sm bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 hover:border-gray-400 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+							class="w-full inline-flex justify-center py-3 px-4 border border-[#dfd4cb] rounded-xl bg-white/90 text-sm font-medium text-[#4b433d] hover:bg-white transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
 							aria-label="Sign in with Facebook"
 						>
 							<svg class="h-5 w-5" fill="currentColor" viewBox="0 0 24 24">
