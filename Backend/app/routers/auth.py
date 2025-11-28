@@ -1,17 +1,20 @@
 from fastapi import APIRouter, Depends, HTTPException, Header
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
+from sqlalchemy import update
 from uuid import uuid4
+from datetime import datetime, timedelta
 from ..database import get_db
 from .. import models
 from ..security import hash_password, verify_password, create_access_token, decode_token
+from ..email_service import send_password_reset_email, send_verification_email, generate_reset_token, generate_verification_token
 
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
 
 @router.post("/signup")
-def signup(payload: dict, db: Session = Depends(get_db)):
+async def signup(payload: dict, db: Session = Depends(get_db)):
 	try:
 		# Validate password exists
 		password = payload.get("password", "")
@@ -22,24 +25,41 @@ def signup(payload: dict, db: Session = Depends(get_db)):
 		existing = db.query(models.User.id).filter(models.User.email == payload["email"]).first()
 		if existing:
 			raise HTTPException(status_code=400, detail="Email already registered")
+		
+		# Generate verification token
+		verification_token = generate_verification_token()
+		
 		user = models.User(
 			id=str(uuid4()),
 			name=payload["name"],
 			email=payload["email"],
 			password_hash=hash_password(password),
-			role='user'
+			role='user',
+			is_verified=False,
+			email_verification_token=verification_token
 		)
 		db.add(user)
 		db.commit()
-		# Refresh will fail if location column doesn't exist, so don't use it
-		# Instead, query the user back with explicit columns
+		
+		# Send verification email
+		try:
+			await send_verification_email(payload["email"], verification_token, payload["name"])
+		except Exception as e:
+			print(f"Failed to send verification email: {str(e)}")
+			# Continue with signup even if email fails
+		
+		# Query the user back with explicit columns
 		user_data = db.query(
 			models.User.id,
 			models.User.name,
 			models.User.email
 		).filter(models.User.id == user.id).first()
 		token = create_access_token(user.id)
-		return {"user": {"id": user_data.id, "name": user_data.name, "email": user_data.email}, "token": token}
+		return {
+			"user": {"id": user_data.id, "name": user_data.name, "email": user_data.email},
+			"token": token,
+			"message": "Account created. Please check your email to verify your account."
+		}
 	except HTTPException:
 		raise
 	except ValueError as e:
@@ -159,14 +179,162 @@ def change_password(payload: dict, authorization: str | None = Header(default=No
 
 @router.get("/user/{user_id}")
 def get_user_public(user_id: str, db: Session = Depends(get_db)):
-    # Use explicit column selection to avoid loading location if it doesn't exist
-    user = db.query(
-        models.User.id,
-        models.User.name,
-        models.User.email
-    ).filter(models.User.id == user_id).first()
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found")
-    return {"id": user.id, "name": user.name, "email": user.email}
+	# Use explicit column selection to avoid loading location if it doesn't exist
+	user = db.query(
+		models.User.id,
+		models.User.name,
+		models.User.email
+	).filter(models.User.id == user_id).first()
+	if not user:
+		raise HTTPException(status_code=404, detail="User not found")
+	return {"id": user.id, "name": user.name, "email": user.email}
+
+
+@router.post("/forgot-password")
+async def forgot_password(payload: dict, db: Session = Depends(get_db)):
+	"""Request password reset - sends email with reset token"""
+	email = payload.get("email", "").strip().lower()
+	if not email:
+		raise HTTPException(status_code=400, detail="Email is required")
+	
+	# Find user by email
+	user = db.query(
+		models.User.id,
+		models.User.name,
+		models.User.email
+	).filter(models.User.email == email).first()
+	
+	# Always return success message (security: don't reveal if email exists)
+	if user:
+		# Generate reset token
+		reset_token = generate_reset_token()
+		reset_expires = datetime.utcnow() + timedelta(hours=1)
+		
+		# Update user with reset token
+		stmt = update(models.User).where(models.User.id == user.id).values(
+			password_reset_token=reset_token,
+			password_reset_expires=reset_expires
+		)
+		db.execute(stmt)
+		db.commit()
+		
+		# Send reset email
+		try:
+			await send_password_reset_email(user.email, reset_token, user.name)
+		except Exception as e:
+			print(f"Failed to send password reset email: {str(e)}")
+			# Still return success for security
+	
+	return {"message": "If an account with that email exists, a password reset link has been sent."}
+
+
+@router.post("/reset-password")
+async def reset_password(payload: dict, db: Session = Depends(get_db)):
+	"""Reset password using token from email"""
+	token = payload.get("token", "").strip()
+	new_password = payload.get("new_password", "")
+	
+	if not token or not new_password:
+		raise HTTPException(status_code=400, detail="Token and new password are required")
+	
+	# Find user by reset token
+	user = db.query(
+		models.User.id,
+		models.User.password_reset_token,
+		models.User.password_reset_expires
+	).filter(models.User.password_reset_token == token).first()
+	
+	if not user:
+		raise HTTPException(status_code=400, detail="Invalid or expired reset token")
+	
+	# Check if token is expired
+	if not user.password_reset_expires or user.password_reset_expires < datetime.utcnow():
+		raise HTTPException(status_code=400, detail="Reset token has expired")
+	
+	# Update password and clear reset token
+	stmt = update(models.User).where(models.User.id == user.id).values(
+		password_hash=hash_password(new_password),
+		password_reset_token=None,
+		password_reset_expires=None
+	)
+	db.execute(stmt)
+	db.commit()
+	
+	return {"message": "Password has been reset successfully"}
+
+
+@router.post("/verify-email")
+async def verify_email(payload: dict, db: Session = Depends(get_db)):
+	"""Verify email address using token from email"""
+	token = payload.get("token", "").strip()
+	
+	if not token:
+		raise HTTPException(status_code=400, detail="Verification token is required")
+	
+	# Find user by verification token
+	user = db.query(
+		models.User.id,
+		models.User.email_verification_token,
+		models.User.is_verified
+	).filter(models.User.email_verification_token == token).first()
+	
+	if not user:
+		raise HTTPException(status_code=400, detail="Invalid verification token")
+	
+	if user.is_verified:
+		return {"message": "Email is already verified"}
+	
+	# Mark email as verified and clear token
+	stmt = update(models.User).where(models.User.id == user.id).values(
+		is_verified=True,
+		email_verification_token=None
+	)
+	db.execute(stmt)
+	db.commit()
+	
+	return {"message": "Email verified successfully"}
+
+
+@router.post("/resend-verification")
+async def resend_verification(payload: dict, db: Session = Depends(get_db)):
+	"""Resend verification email"""
+	email = payload.get("email", "").strip().lower()
+	
+	if not email:
+		raise HTTPException(status_code=400, detail="Email is required")
+	
+	# Find user by email
+	user = db.query(
+		models.User.id,
+		models.User.name,
+		models.User.email,
+		models.User.is_verified,
+		models.User.email_verification_token
+	).filter(models.User.email == email).first()
+	
+	if not user:
+		# Don't reveal if email exists
+		return {"message": "If an account with that email exists and is not verified, a verification email has been sent."}
+	
+	if user.is_verified:
+		return {"message": "Email is already verified"}
+	
+	# Generate new verification token
+	verification_token = generate_verification_token()
+	
+	# Update user with new token
+	stmt = update(models.User).where(models.User.id == user.id).values(
+		email_verification_token=verification_token
+	)
+	db.execute(stmt)
+	db.commit()
+	
+	# Send verification email
+	try:
+		await send_verification_email(user.email, verification_token, user.name)
+	except Exception as e:
+		print(f"Failed to send verification email: {str(e)}")
+	
+	return {"message": "If an account with that email exists and is not verified, a verification email has been sent."}
 
 

@@ -16,6 +16,9 @@ class User(Base):
 	location = Column(String(255))  # City/Province location
 	created_at = Column(DateTime, server_default=func.now())
 	last_login_at = Column(DateTime)
+	email_verification_token = Column(String(255), nullable=True)
+	password_reset_token = Column(String(255), nullable=True)
+	password_reset_expires = Column(DateTime, nullable=True)
 
 
 class Category(Base):

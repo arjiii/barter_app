@@ -12,6 +12,21 @@ class Settings(BaseSettings):
 	# SSL_CA_PATH is empty, the backend will write this to a temp file and use it.
 	SSL_CA_PEM: str | None = None
 	SECRET_KEY: str = os.getenv("SECRET_KEY", "dev-secret-key-change-in-production")
+	
+	# Email configuration
+	MAIL_USERNAME: str = os.getenv("MAIL_USERNAME", "")
+	MAIL_PASSWORD: str = os.getenv("MAIL_PASSWORD", "")
+	MAIL_FROM: str = os.getenv("MAIL_FROM", "noreply@bayanihanexchange.com")
+	MAIL_PORT: int = int(os.getenv("MAIL_PORT", "587"))
+	MAIL_SERVER: str = os.getenv("MAIL_SERVER", "smtp.gmail.com")
+	MAIL_FROM_NAME: str = os.getenv("MAIL_FROM_NAME", "Bayanihan Exchange")
+	MAIL_STARTTLS: bool = True
+	MAIL_SSL_TLS: bool = False
+	USE_CREDENTIALS: bool = True
+	VALIDATE_CERTS: bool = True
+	
+	# Frontend URL for email links
+	FRONTEND_URL: str = os.getenv("FRONTEND_URL", "http://localhost:5173")
 
 	class Config:
 		env_file = ".env"

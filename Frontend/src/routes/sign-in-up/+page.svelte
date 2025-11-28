@@ -17,6 +17,11 @@
 		isLoading: false,
 		errors: {}
 	});
+	
+	// Forgot password state
+	let showForgotPassword = $state(false);
+	let forgotPasswordEmail = $state('');
+	let forgotPasswordSent = $state(false);
 
 	// Form data - use any type to handle both login and signup
 	let formData = $state<any>({
@@ -98,6 +103,17 @@
 				// Update auth store
 				authStore.setUser(response.user);
 				
+				// Show verification message if signup
+				if (formState.isSignUp && response.message && response.message.includes('verify')) {
+					formState.errors = {
+						general: response.message
+					};
+					// Still redirect but show message
+					setTimeout(() => {
+						formState.errors = {};
+					}, 5000);
+				}
+				
 				// Redirect to dashboard
 				await goto('/discovery');
 			} else {
@@ -128,6 +144,34 @@
 			alert(`${provider} login not implemented yet`);
 		} catch (error) {
 			console.error('Social login error:', error);
+		} finally {
+			formState.isLoading = false;
+		}
+	}
+
+	/**
+	 * Handle forgot password
+	 */
+	async function handleForgotPassword(event: Event): Promise<void> {
+		event.preventDefault();
+		if (!forgotPasswordEmail.trim()) {
+			formState.errors = { general: 'Please enter your email address' };
+			return;
+		}
+		
+		formState.isLoading = true;
+		formState.errors = {};
+		
+		try {
+			const result = await authService.requestPasswordReset(forgotPasswordEmail.trim());
+			if (result.success) {
+				forgotPasswordSent = true;
+			} else {
+				formState.errors = { general: result.message };
+			}
+		} catch (error) {
+			console.error('Forgot password error:', error);
+			formState.errors = { general: 'An error occurred. Please try again.' };
 		} finally {
 			formState.isLoading = false;
 		}
@@ -349,7 +393,11 @@
 							</div>
 
 							<div>
-								<button type="button" class="font-medium text-[#ff6d3f] hover:text-[#ff5724] transition-colors">
+								<button 
+									type="button" 
+									class="font-medium text-[#ff6d3f] hover:text-[#ff5724] transition-colors"
+									onclick={() => showForgotPassword = true}
+								>
 									Forgot Password?
 								</button>
 							</div>
@@ -433,4 +481,72 @@
 			</div>
 		</div>
 	</div>
+
+	<!-- Forgot Password Modal -->
+	{#if showForgotPassword}
+		<div class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4" onclick={() => { if (!forgotPasswordSent) showForgotPassword = false; }}>
+			<div class="bg-white rounded-2xl shadow-xl max-w-md w-full p-6" onclick={(e) => e.stopPropagation()}>
+				{#if !forgotPasswordSent}
+					<h2 class="text-2xl font-semibold text-[#1f1b17] mb-4">Forgot Password?</h2>
+					<p class="text-sm text-[#6c6b69] mb-6">
+						Enter your email address and we'll send you a link to reset your password.
+					</p>
+					<form onsubmit={handleForgotPassword} class="space-y-4">
+						<div>
+							<label for="forgot-email" class="block text-xs uppercase tracking-[0.2em] text-[#8b6b55] mb-2">
+								Email Address
+							</label>
+							<input
+								id="forgot-email"
+								type="email"
+								bind:value={forgotPasswordEmail}
+								required
+								class="w-full px-4 py-3 border border-[#e3d8cf] rounded-xl bg-[#fdf9f6] focus:outline-none focus:ring-2 focus:ring-[#ffb797] focus:border-[#ff855a] transition-colors text-[#2d261f]"
+								placeholder="Enter your email"
+							/>
+						</div>
+						{#if formState.errors.general}
+							<div class="p-3 bg-red-100 border border-red-400 text-red-700 rounded-lg text-sm">
+								{formState.errors.general}
+							</div>
+						{/if}
+						<div class="flex gap-3">
+							<button
+								type="button"
+								onclick={() => { showForgotPassword = false; forgotPasswordEmail = ''; formState.errors = {}; }}
+								class="flex-1 px-4 py-3 border border-[#e3d8cf] rounded-xl text-[#4d4138] hover:bg-[#fdf9f6] transition-colors"
+							>
+								Cancel
+							</button>
+							<button
+								type="submit"
+								disabled={formState.isLoading}
+								class="flex-1 px-4 py-3 bg-[#1f1b17] text-white rounded-xl font-semibold hover:bg-black disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+							>
+								{formState.isLoading ? 'Sending...' : 'Send Reset Link'}
+							</button>
+						</div>
+					</form>
+				{:else}
+					<div class="text-center">
+						<div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+							<svg class="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+							</svg>
+						</div>
+						<h2 class="text-2xl font-semibold text-[#1f1b17] mb-2">Check Your Email</h2>
+						<p class="text-sm text-[#6c6b69] mb-6">
+							We've sent a password reset link to <strong>{forgotPasswordEmail}</strong>
+						</p>
+						<button
+							onclick={() => { showForgotPassword = false; forgotPasswordEmail = ''; forgotPasswordSent = false; formState.errors = {}; }}
+							class="w-full px-4 py-3 bg-[#1f1b17] text-white rounded-xl font-semibold hover:bg-black transition-colors"
+						>
+							Close
+						</button>
+					</div>
+				{/if}
+			</div>
+		</div>
+	{/if}
 </div>

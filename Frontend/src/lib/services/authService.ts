@@ -272,6 +272,84 @@ class AuthService {
             return false;
         }
     }
+
+    /**
+     * Request password reset - sends email with reset link
+     */
+    async requestPasswordReset(email: string): Promise<{ success: boolean; message: string }> {
+        try {
+            const res = await fetch(`${API_BASE_URL}/auth/forgot-password`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email })
+            });
+            const data = await res.json();
+            return { success: res.ok, message: data.message || 'Password reset email sent' };
+        } catch (e) {
+            console.error('Request password reset error:', e);
+            return { success: false, message: 'Failed to send password reset email' };
+        }
+    }
+
+    /**
+     * Reset password using token from email
+     */
+    async resetPassword(token: string, newPassword: string): Promise<{ success: boolean; message: string }> {
+        try {
+            const res = await fetch(`${API_BASE_URL}/auth/reset-password`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ token, new_password: newPassword })
+            });
+            const data = await res.json();
+            if (!res.ok) {
+                return { success: false, message: data.detail || data.message || 'Password reset failed' };
+            }
+            return { success: true, message: data.message || 'Password reset successfully' };
+        } catch (e) {
+            console.error('Reset password error:', e);
+            return { success: false, message: 'Failed to reset password' };
+        }
+    }
+
+    /**
+     * Verify email using token from email
+     */
+    async verifyEmail(token: string): Promise<{ success: boolean; message: string }> {
+        try {
+            const res = await fetch(`${API_BASE_URL}/auth/verify-email`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ token })
+            });
+            const data = await res.json();
+            if (!res.ok) {
+                return { success: false, message: data.detail || data.message || 'Email verification failed' };
+            }
+            return { success: true, message: data.message || 'Email verified successfully' };
+        } catch (e) {
+            console.error('Verify email error:', e);
+            return { success: false, message: 'Failed to verify email' };
+        }
+    }
+
+    /**
+     * Resend verification email
+     */
+    async resendVerificationEmail(email: string): Promise<{ success: boolean; message: string }> {
+        try {
+            const res = await fetch(`${API_BASE_URL}/auth/resend-verification`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email })
+            });
+            const data = await res.json();
+            return { success: res.ok, message: data.message || 'Verification email sent' };
+        } catch (e) {
+            console.error('Resend verification email error:', e);
+            return { success: false, message: 'Failed to send verification email' };
+        }
+    }
     /**
      * Sign up new user
      */
