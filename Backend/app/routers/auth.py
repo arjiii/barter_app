@@ -7,7 +7,7 @@ from datetime import datetime, timedelta
 from ..database import get_db
 from .. import models
 from ..security import hash_password, verify_password, create_access_token, decode_token
-from ..email_service import send_password_reset_email, send_verification_email, generate_reset_token, generate_verification_token
+from ..email_service import send_password_reset_email, send_verification_email, generate_reset_token, generate_verification_token, generate_otp, send_otp_email
 
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -26,8 +26,9 @@ async def signup(payload: dict, db: Session = Depends(get_db)):
 		if existing:
 			raise HTTPException(status_code=400, detail="Email already registered")
 		
-		# Generate verification token
-		verification_token = generate_verification_token()
+		# Generate OTP
+		otp = generate_otp()
+		otp_expires = datetime.utcnow() + timedelta(minutes=10)
 		
 		user = models.User(
 			id=str(uuid4()),
@@ -36,16 +37,17 @@ async def signup(payload: dict, db: Session = Depends(get_db)):
 			password_hash=hash_password(password),
 			role='user',
 			is_verified=False,
-			email_verification_token=verification_token
+			otp_code=otp,
+			otp_expires_at=otp_expires
 		)
 		db.add(user)
 		db.commit()
 		
-		# Send verification email
+		# Send OTP email
 		try:
-			await send_verification_email(payload["email"], verification_token, payload["name"])
+			await send_otp_email(payload["email"], otp, payload["name"])
 		except Exception as e:
-			print(f"Failed to send verification email: {str(e)}")
+			print(f"Failed to send OTP email: {str(e)}")
 			# Continue with signup even if email fails
 		
 		# Query the user back with explicit columns
@@ -265,29 +267,40 @@ async def reset_password(payload: dict, db: Session = Depends(get_db)):
 
 @router.post("/verify-email")
 async def verify_email(payload: dict, db: Session = Depends(get_db)):
-	"""Verify email address using token from email"""
-	token = payload.get("token", "").strip()
+	"""Verify email address using OTP"""
+	email = payload.get("email", "").strip().lower()
+	otp = payload.get("otp", "").strip()
 	
-	if not token:
-		raise HTTPException(status_code=400, detail="Verification token is required")
+	if not email or not otp:
+		raise HTTPException(status_code=400, detail="Email and OTP are required")
 	
-	# Find user by verification token
+	# Find user by email
 	user = db.query(
 		models.User.id,
-		models.User.email_verification_token,
+		models.User.otp_code,
+		models.User.otp_expires_at,
 		models.User.is_verified
-	).filter(models.User.email_verification_token == token).first()
+	).filter(models.User.email == email).first()
 	
 	if not user:
-		raise HTTPException(status_code=400, detail="Invalid verification token")
+		raise HTTPException(status_code=400, detail="Invalid email or OTP")
 	
 	if user.is_verified:
 		return {"message": "Email is already verified"}
+		
+	# Check OTP
+	if not user.otp_code or user.otp_code != otp:
+		raise HTTPException(status_code=400, detail="Invalid OTP")
+		
+	# Check expiration
+	if not user.otp_expires_at or user.otp_expires_at < datetime.utcnow():
+		raise HTTPException(status_code=400, detail="OTP has expired")
 	
-	# Mark email as verified and clear token
+	# Mark email as verified and clear OTP
 	stmt = update(models.User).where(models.User.id == user.id).values(
 		is_verified=True,
-		email_verification_token=None
+		otp_code=None,
+		otp_expires_at=None
 	)
 	db.execute(stmt)
 	db.commit()
@@ -319,22 +332,24 @@ async def resend_verification(payload: dict, db: Session = Depends(get_db)):
 	if user.is_verified:
 		return {"message": "Email is already verified"}
 	
-	# Generate new verification token
-	verification_token = generate_verification_token()
+	# Generate new OTP
+	otp = generate_otp()
+	otp_expires = datetime.utcnow() + timedelta(minutes=10)
 	
-	# Update user with new token
+	# Update user with new OTP
 	stmt = update(models.User).where(models.User.id == user.id).values(
-		email_verification_token=verification_token
+		otp_code=otp,
+		otp_expires_at=otp_expires
 	)
 	db.execute(stmt)
 	db.commit()
 	
-	# Send verification email
+	# Send OTP email
 	try:
-		await send_verification_email(user.email, verification_token, user.name)
+		await send_otp_email(user.email, otp, user.name)
 	except Exception as e:
-		print(f"Failed to send verification email: {str(e)}")
+		print(f"Failed to send OTP email: {str(e)}")
 	
-	return {"message": "If an account with that email exists and is not verified, a verification email has been sent."}
+	return {"message": "If an account with that email exists and is not verified, a verification code has been sent."}
 
 

@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, Integer, DateTime, Boolean, Enum, ForeignKey, Text, JSON
+from sqlalchemy import Column, String, Integer, DateTime, Boolean, Enum, ForeignKey, Text, JSON, Float
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
 from .database import Base
@@ -18,7 +18,12 @@ class User(Base):
 	last_login_at = Column(DateTime)
 	email_verification_token = Column(String(255), nullable=True)
 	password_reset_token = Column(String(255), nullable=True)
+	password_reset_token = Column(String(255), nullable=True)
 	password_reset_expires = Column(DateTime, nullable=True)
+	otp_code = Column(String(6), nullable=True)
+	otp_expires_at = Column(DateTime, nullable=True)
+	latitude = Column(Float, nullable=True)
+	longitude = Column(Float, nullable=True)
 
 
 class Category(Base):
@@ -42,6 +47,8 @@ class Item(Base):
 	condition = Column(String(100))
 	images = Column(JSON)
 	location = Column(String(255))  # City/Province location for the item
+	latitude = Column(Float, nullable=True)
+	longitude = Column(Float, nullable=True)
 	status = Column(Enum('available', 'traded', 'removed', 'draft', 'pending', name='item_status'), default='available')
 	views = Column(Integer, default=0)
 	created_at = Column(DateTime, server_default=func.now())

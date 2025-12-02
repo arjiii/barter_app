@@ -32,6 +32,13 @@ def generate_verification_token() -> str:
     return secrets.token_urlsafe(32)
 
 
+def generate_otp() -> str:
+    """Generate a 6-digit OTP"""
+    import random
+    import string
+    return ''.join(random.choices(string.digits, k=6))
+
+
 async def send_password_reset_email(email: str, token: str, user_name: str):
     """Send password reset email"""
     reset_url = f"{settings.FRONTEND_URL}/reset-password?token={token}"
@@ -149,3 +156,64 @@ async def send_verification_email(email: str, token: str, user_name: str):
         print(f"Error sending verification email: {str(e)}")
         return False
 
+    try:
+        await fastmail.send(message)
+        return True
+    except Exception as e:
+        print(f"Error sending verification email: {str(e)}")
+        return False
+
+
+async def send_otp_email(email: str, otp: str, user_name: str):
+    """Send OTP verification email"""
+    
+    html_content = f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset="utf-8">
+        <style>
+            body {{ font-family: Arial, sans-serif; line-height: 1.6; color: #333; }}
+            .container {{ max-width: 600px; margin: 0 auto; padding: 20px; }}
+            .header {{ background: linear-gradient(135deg, #ff6d3f 0%, #ff855a 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }}
+            .content {{ background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px; }}
+            .otp-code {{ display: inline-block; padding: 15px 30px; background: #f0f0f0; color: #333; font-size: 24px; font-weight: bold; letter-spacing: 5px; border-radius: 5px; margin: 20px 0; border: 1px solid #ddd; }}
+            .footer {{ text-align: center; margin-top: 20px; color: #666; font-size: 12px; }}
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <div class="header">
+                <h1>Bayanihan Exchange</h1>
+                <p>Your Verification Code</p>
+            </div>
+            <div class="content">
+                <p>Hello {user_name},</p>
+                <p>Welcome to Bayanihan Exchange! Please use the following code to verify your email address:</p>
+                <div style="text-align: center;">
+                    <div class="otp-code">{otp}</div>
+                </div>
+                <p><strong>This code will expire in 10 minutes.</strong></p>
+                <p>If you didn't create an account, please ignore this email.</p>
+            </div>
+            <div class="footer">
+                <p>© 2025 Bayanihan Exchange. All rights reserved.</p>
+            </div>
+        </div>
+    </body>
+    </html>
+    """
+    
+    message = MessageSchema(
+        subject="Your Verification Code - Bayanihan Exchange",
+        recipients=[email],
+        body=html_content,
+        subtype="html"
+    )
+    
+    try:
+        await fastmail.send(message)
+        return True
+    except Exception as e:
+        print(f"Error sending OTP email: {str(e)}")
+        return False

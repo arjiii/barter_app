@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, Query, HTTPException, status
 import json
+import math
 from sqlalchemy.orm import Session
 from uuid import uuid4
 from ..database import get_db
@@ -29,6 +30,8 @@ def _serialize_item(item: models.Item, owner_name: str | None = None, owner_id: 
         "condition": item.condition,
         "images": images_value,
         "location": getattr(item, "location", None),
+        "latitude": getattr(item, "latitude", None),
+        "longitude": getattr(item, "longitude", None),
         "status": item.status,
         "views": item.views,
         "created_at": item.created_at,
@@ -49,8 +52,22 @@ def list_items(
 	category: str | None = Query(default=None),
 	limit: int = Query(default=100, ge=1, le=500),
 	offset: int = Query(default=0, ge=0),
+	user_lat: float | None = Query(default=None),
+	user_lon: float | None = Query(default=None),
 	db: Session = Depends(get_db),
 ):
+    def calculate_distance(lat1, lon1, lat2, lon2):
+        if lat1 is None or lon1 is None or lat2 is None or lon2 is None:
+            return float('inf')
+        try:
+            R = 6371  # Earth radius in km
+            dlat = math.radians(lat2 - lat1)
+            dlon = math.radians(lon2 - lon1)
+            a = math.sin(dlat / 2) * math.sin(dlat / 2) + math.cos(math.radians(lat1)) * math.cos(math.radians(lat2)) * math.sin(dlon / 2) * math.sin(dlon / 2)
+            c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+            return R * c
+        except Exception:
+            return float('inf')
     try:
         q = db.query(
             models.Item,
@@ -65,25 +82,39 @@ def list_items(
         if category and category != 'all':
             q = q.filter(models.Item.category == category)
 
-        try:
-            # Preferred: newest first
-            rows = (
-                q.order_by(models.Item.created_at.desc())
-                .limit(limit)
-                .offset(offset)
-                .all()
-            )
-        except Exception as inner:
-            # MySQL "Out of sort memory" – retry without ORDER BY so at least items show
-            if "Out of sort memory" in str(inner):
+        # If user location is provided, fetch all (or more) items to sort by distance in Python
+        # This is a trade-off for DB-agnostic distance sorting without PostGIS/MySQL extensions
+        if user_lat is not None and user_lon is not None:
+             # Fetch more items to allow for sorting, but still limit to avoid OOM
+            rows = q.all()
+            
+            # Sort by distance
+            rows.sort(key=lambda x: calculate_distance(user_lat, user_lon, x[0].latitude, x[0].longitude))
+            
+            # Apply pagination after sorting
+            start = offset
+            end = offset + limit
+            rows = rows[start:end]
+        else:
+            try:
+                # Preferred: newest first
                 rows = (
-                    q.order_by(None)
+                    q.order_by(models.Item.created_at.desc())
                     .limit(limit)
                     .offset(offset)
                     .all()
                 )
-            else:
-                raise
+            except Exception as inner:
+                # MySQL "Out of sort memory" – retry without ORDER BY so at least items show
+                if "Out of sort memory" in str(inner):
+                    rows = (
+                        q.order_by(None)
+                        .limit(limit)
+                        .offset(offset)
+                        .all()
+                    )
+                else:
+                    raise
 
         return [_serialize_item(item, owner_name, owner_id) for item, owner_name, owner_id in rows]
     except Exception as e:
@@ -101,6 +132,8 @@ def create_item(payload: dict, db: Session = Depends(get_db)):
 		condition=payload.get("condition"),
 		images=payload.get("images"),
 		location=payload.get("location"),
+		latitude=payload.get("latitude"),
+		longitude=payload.get("longitude"),
 		status=payload.get("status", "available"),
 	)
 	db.add(obj)
@@ -133,7 +166,7 @@ def update_item(item_id: str, payload: dict, db: Session = Depends(get_db)):
     if not obj:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Item not found")
 
-    allowed_fields = {"title", "description", "category", "condition", "images", "status", "location"}
+    allowed_fields = {"title", "description", "category", "condition", "images", "status", "location", "latitude", "longitude"}
     for field in allowed_fields:
         if field in payload:
             setattr(obj, field, payload[field])

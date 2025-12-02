@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 from .config import settings
 from .database import Base, engine, get_db
 from . import models
-from .routers import categories, items, trades, messages, auth, realtime
+from .routers import categories, items, trades, messages, auth, realtime, admin
 
 app = FastAPI(title="Bayanihan Exchange API")
 
@@ -95,6 +95,7 @@ app.include_router(trades.router)
 app.include_router(messages.router)
 app.include_router(auth.router)
 app.include_router(realtime.router)
+app.include_router(admin.router)
 
 
 

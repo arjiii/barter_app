@@ -313,14 +313,14 @@ class AuthService {
     }
 
     /**
-     * Verify email using token from email
+     * Verify email using OTP
      */
-    async verifyEmail(token: string): Promise<{ success: boolean; message: string }> {
+    async verifyEmail(email: string, otp: string): Promise<{ success: boolean; message: string }> {
         try {
             const res = await fetch(`${API_BASE_URL}/auth/verify-email`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ token })
+                body: JSON.stringify({ email, otp })
             });
             const data = await res.json();
             if (!res.ok) {
