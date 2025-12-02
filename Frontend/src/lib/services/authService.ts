@@ -1,11 +1,11 @@
 import bcrypt from 'bcryptjs';
 import { v4 as uuidv4 } from 'uuid';
 import { API_BASE_URL } from '../config/api';
-import type { 
-    User, 
-    AuthResponse, 
-    LoginCredentials, 
-    SignUpCredentials 
+import type {
+    User,
+    AuthResponse,
+    LoginCredentials,
+    SignUpCredentials
 } from '../types/auth';
 
 // Browser-compatible database using localStorage
@@ -36,7 +36,7 @@ class BrowserDatabase {
     }): User | null {
         try {
             const users = this.getUsers();
-            
+
             // Check if user already exists
             if (users.find(u => u.email === userData.email)) {
                 return null;
@@ -128,7 +128,7 @@ class BrowserDatabase {
         try {
             const sessions = this.getSessions();
             const session = sessions.find(s => s.token === token);
-            
+
             if (!session) return null;
 
             return {
@@ -182,10 +182,10 @@ class AuthService {
             }
             const data = await res.json();
             const { user: apiUser, token } = data;
-            
+
             // Store the token in localStorage
             localStorage.setItem('bayanihan_token', token);
-            
+
             const user = {
                 id: apiUser.id,
                 email: apiUser.email,
@@ -196,7 +196,7 @@ class AuthService {
                 lastLoginAt: new Date(),
                 location: apiUser.location || undefined
             };
-            
+
             if (!user) {
                 return {
                     success: false,
@@ -358,7 +358,14 @@ class AuthService {
             const res = await fetch(`${API_BASE_URL}/auth/signup`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name: credentials.name, email: credentials.email, password: credentials.password })
+                body: JSON.stringify({
+                    name: credentials.name,
+                    email: credentials.email,
+                    password: credentials.password,
+                    location: credentials.location,
+                    latitude: credentials.latitude,
+                    longitude: credentials.longitude
+                })
             });
             if (!res.ok) {
                 // Try to extract error message from backend
@@ -380,12 +387,12 @@ class AuthService {
                         // Use default error message
                     }
                 }
-                
+
                 // For validation errors (400), return the error message directly
                 if (res.status === 400) {
                     return { success: false, message: errorMessage, errors: [errorMessage] };
                 }
-                
+
                 // For other errors, try local fallback
                 const saltRounds = 12;
                 const passwordHash = await bcrypt.hash(credentials.password, saltRounds);
@@ -453,7 +460,7 @@ class AuthService {
         try {
             const token = localStorage.getItem('bayanihan_token');
             if (!token) return null;
-            
+
             // If token is a UUID (offline mode), only check local session
             if (this.isUuidToken(token)) {
                 const session = database.getSessionByToken(token);
@@ -464,7 +471,7 @@ class AuthService {
                 const user = database.getUserById(session.userId);
                 return user;
             }
-            
+
             // Token is a JWT, try backend first
             const res = await fetch(`${API_BASE_URL}/auth/me`, { headers: { Authorization: `Bearer ${token}` } });
             if (!res.ok) {
@@ -515,7 +522,7 @@ class AuthService {
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(testUser)
                 });
-                
+
                 if (res.ok) {
                     const data = await res.json();
                     const { user: apiUser, token } = data;
@@ -528,9 +535,9 @@ class AuthService {
                         createdAt: new Date(),
                         lastLoginAt: new Date()
                     };
-                    
+
                     localStorage.setItem('bayanihan_token', token);
-                    
+
                     return {
                         success: true,
                         user,
@@ -544,7 +551,7 @@ class AuthService {
                         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
                         body: new URLSearchParams({ username: testUser.email, password: testUser.password })
                     });
-                    
+
                     if (loginRes.ok) {
                         const data = await loginRes.json();
                         const { user: apiUser, token } = data;
@@ -557,9 +564,9 @@ class AuthService {
                             createdAt: new Date(),
                             lastLoginAt: new Date()
                         };
-                        
+
                         localStorage.setItem('bayanihan_token', token);
-                        
+
                         return {
                             success: true,
                             user,

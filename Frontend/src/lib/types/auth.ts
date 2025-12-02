@@ -30,6 +30,9 @@ export interface SignUpCredentials {
 	email: string;
 	password: string;
 	confirmPassword: string;
+	location?: string;
+	latitude?: number;
+	longitude?: number;
 }
 
 export interface AuthState {
@@ -42,7 +45,7 @@ export interface AuthState {
 export interface FormState {
 	isSignUp: boolean;
 	isLoading: boolean;
-    errors: ValidationErrors;
+	errors: ValidationErrors;
 }
 
 export interface ValidationErrors {
@@ -50,7 +53,7 @@ export interface ValidationErrors {
 	password?: string;
 	name?: string;
 	confirmPassword?: string;
-    general?: string;
+	general?: string;
 }
 
 export type AuthMode = 'signin' | 'signup';

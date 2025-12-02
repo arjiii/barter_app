@@ -43,18 +43,24 @@
 		.slice(-1)[0];
 </script>
 
-<div class="flex-1 overflow-y-auto px-6 py-6 space-y-4" bind:this={listRef} on:scroll={handleScroll}>
+<div
+	class="flex-1 space-y-4 overflow-y-auto px-6 py-6"
+	bind:this={listRef}
+	on:scroll={handleScroll}
+>
 	{#each messages as message (message.id)}
-		<div class={"flex " + (message.senderId === currentUserId ? 'justify-end' : 'justify-start')}>
+		<div class={'flex ' + (message.senderId === currentUserId ? 'justify-end' : 'justify-start')}>
 			<div
 				class={`max-w-[80%] rounded-2xl px-4 py-3 text-sm shadow-lg ${
 					message.senderId === currentUserId
-						? 'bg-gradient-to-br from-[#0a86ff] via-[#0f59ff] to-[#7b1dff] text-white rounded-tr-sm'
-						: 'bg-[#fff6ee] text-[#3a2315] rounded-tl-sm border border-[#f5e1ce] shadow-[0_4px_12px_rgba(0,0,0,0.08)]'
+						? 'rounded-tr-sm bg-gradient-to-br from-[#ff6d3f] to-[#ff855a] text-white'
+						: 'rounded-tl-sm border border-[#f5e1ce] bg-[#fff6ee] text-[#3a2315] shadow-[0_4px_12px_rgba(0,0,0,0.08)]'
 				}`}
 			>
 				<p class="leading-relaxed">{message.content}</p>
-				<p class={`text-[11px] mt-1 ${message.senderId === currentUserId ? 'text-white/60' : 'text-[#a37758]'}`}>
+				<p
+					class={`mt-1 text-[11px] ${message.senderId === currentUserId ? 'text-white/60' : 'text-[#a37758]'}`}
+				>
 					{new Date(message.createdAt).toLocaleString()}
 				</p>
 			</div>
@@ -63,15 +69,15 @@
 
 	{#if typingText}
 		<div class="flex justify-start">
-			<div class="px-4 py-2 rounded-2xl bg-white/70 text-[#6a4a37] text-sm shadow">
+			<div class="rounded-2xl bg-white/70 px-4 py-2 text-sm text-[#6a4a37] shadow">
 				{typingText}
 			</div>
 		</div>
 	{/if}
 
 	{#if lastMessageFromSelf && seenTimestamp}
-		<p class="text-xs text-[#7d5b45] text-right pr-4">Seen • {seenTimestamp.toLocaleTimeString()}</p>
+		<p class="pr-4 text-right text-xs text-[#7d5b45]">
+			Seen • {seenTimestamp.toLocaleTimeString()}
+		</p>
 	{/if}
 </div>
-
-

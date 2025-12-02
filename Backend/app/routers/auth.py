@@ -38,7 +38,10 @@ async def signup(payload: dict, db: Session = Depends(get_db)):
 			role='user',
 			is_verified=False,
 			otp_code=otp,
-			otp_expires_at=otp_expires
+			otp_expires_at=otp_expires,
+			location=payload.get("location"),
+			latitude=payload.get("latitude"),
+			longitude=payload.get("longitude")
 		)
 		db.add(user)
 		db.commit()
@@ -93,6 +96,13 @@ def login(form: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get
 	).filter(models.User.email == form.username).first()
 	if not user or not verify_password(form.password, user.password_hash):
 		raise HTTPException(status_code=400, detail="Invalid credentials")
+	
+	# Check if user is verified - use getattr to be safe if column wasn't loaded (though it's not in the query above, we should add it)
+	# Re-query or check is_verified if we add it to the query
+	user_verification = db.query(models.User.is_verified).filter(models.User.id == user.id).scalar()
+	if not user_verification:
+		raise HTTPException(status_code=400, detail="Please verify your email address before logging in.")
+
 	token = create_access_token(user.id)
 	return {"user": {"id": user.id, "name": user.name, "email": user.email, "location": getattr(user, "location", None)}, "token": token}
 
