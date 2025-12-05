@@ -9,6 +9,8 @@ export interface User {
 	createdAt: Date;
 	lastLoginAt?: Date;
 	location?: string;
+	latitude?: number;
+	longitude?: number;
 }
 
 export interface AuthResponse {

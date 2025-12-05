@@ -1,139 +1,78 @@
-# Email Authentication Setup Guide
+# Email Configuration Guide
 
-## Overview
-The forgot password and email verification features have been implemented. This guide explains how to configure email sending.
+To enable OTP email verification, you need to ensure your Supabase project is configured correctly.
+We have switched to using **Supabase Auth** to send verification emails, so you do **NOT** need to configure Gmail SMTP anymore.
 
-## Features Implemented
+### Supabase Email Configuration
+1. Go to your Supabase Project Dashboard
+2. Navigate to **Authentication** -> **Providers** -> **Email**
+3. Ensure **Enable Email Provider** is ON
+4. Ensure **Confirm Email** is ON (or OFF if you want to skip verification, but our app expects it)
+5. **IMPORTANT:** For the OTP code to work in our app, you should ensure the email template includes the code.
+   - Go to **Authentication** -> **Email Templates** -> **Magic Link**
+   - Ensure the body contains `{{ .Token }}` to show the 6-digit code.
+   - Example: `<p>Your verification code is: <strong>{{ .Token }}</strong></p>`
 
-### Backend
-1. **Password Reset Flow**
-   - `/auth/forgot-password` - Request password reset (sends email)
-   - `/auth/reset-password` - Reset password using token
-   - Tokens expire after 1 hour
+### Environment Variables
+Ensure `SUPABASE_URL` and `SUPABASE_ANON_KEY` are set in your `Backend/.env` file.
 
-2. **Email Verification Flow**
-   - `/auth/verify-email` - Verify email using token
-   - `/auth/resend-verification` - Resend verification email
-   - Verification tokens expire after 24 hours
-   - Signup automatically sends verification email
 
-### Frontend
-1. **Forgot Password UI**
-   - Modal on sign-in page
-   - Reset password page at `/reset-password?token=...`
+### Step 1: Enable 2-Factor Authentication on Gmail
+1. Go to your Google Account settings
+2. Navigate to Security
+3. Enable 2-Step Verification
 
-2. **Email Verification UI**
-   - Automatic verification page at `/verify-email?token=...`
-   - Shows success/error states
+### Step 2: Create an App Password
+1. Go to https://myaccount.google.com/apppasswords
+2. Select "Mail" and "Other (Custom name)"
+3. Name it "Bayanihan Exchange"
+4. Copy the generated 16-character password
 
-## Email Configuration
+### Step 3: Update .env File
 
-### Option 1: Gmail (Recommended for Development)
+Add these lines to your `Backend/.env` file:
 
-1. **Enable App Password in Gmail:**
-   - Go to your Google Account settings
-   - Security → 2-Step Verification (enable if not already)
-   - App passwords → Generate app password
-   - Copy the 16-character password
+```env
+# Email Configuration
+MAIL_USERNAME=your-email@gmail.com
+MAIL_PASSWORD=your-16-char-app-password
+MAIL_FROM=your-email@gmail.com
+MAIL_FROM_NAME=Bayanihan Exchange
+MAIL_SERVER=smtp.gmail.com
+MAIL_PORT=587
+MAIL_STARTTLS=True
+MAIL_SSL_TLS=False
+USE_CREDENTIALS=True
+VALIDATE_CERTS=True
+FRONTEND_URL=http://localhost:5173
+```
 
-2. **Set Environment Variables in Railway:**
-   ```
-   MAIL_USERNAME=your-email@gmail.com
-   MAIL_PASSWORD=your-16-char-app-password
-   MAIL_FROM=your-email@gmail.com
-   MAIL_SERVER=smtp.gmail.com
-   MAIL_PORT=587
-   MAIL_FROM_NAME=Bayanihan Exchange
-   FRONTEND_URL=https://barterappv3.vercel.app
-   ```
+Replace:
+- `your-email@gmail.com` with your actual Gmail address
+- `your-16-char-app-password` with the App Password from Step 2
 
-### Option 2: SendGrid (Recommended for Production)
+### Step 4: Restart the Backend Server
 
-1. **Create SendGrid Account:**
-   - Sign up at https://sendgrid.com
-   - Create an API key
+After updating the .env file, restart your backend server for changes to take effect.
 
-2. **Set Environment Variables:**
-   ```
-   MAIL_USERNAME=apikey
-   MAIL_PASSWORD=your-sendgrid-api-key
-   MAIL_FROM=noreply@yourdomain.com
-   MAIL_SERVER=smtp.sendgrid.net
-   MAIL_PORT=587
-   MAIL_FROM_NAME=Bayanihan Exchange
-   FRONTEND_URL=https://barterappv3.vercel.app
-   ```
+## Alternative: Admin Verification
 
-### Option 3: Other SMTP Providers
+If you don't want to set up email, users can select "Verify via Admin Request (Manual Approval)" during signup. The admin can then approve them from the admin panel at `/admin/users`.
 
-For other providers (Mailgun, AWS SES, etc.), update the environment variables accordingly:
-- `MAIL_SERVER` - SMTP server address
-- `MAIL_PORT` - Usually 587 (TLS) or 465 (SSL)
-- `MAIL_USERNAME` - Your SMTP username
-- `MAIL_PASSWORD` - Your SMTP password
-- `MAIL_STARTTLS` - Set to `true` for port 587
-- `MAIL_SSL_TLS` - Set to `true` for port 465
-
-## Railway Configuration Steps
-
-1. **Go to Railway Dashboard:**
-   - Select your `barter_app` service
-   - Go to "Variables" tab
-
-2. **Add Email Environment Variables:**
-   - Click "New Variable"
-   - Add each variable from the list above
-   - Make sure `FRONTEND_URL` matches your Vercel deployment URL
-
-3. **Redeploy:**
-   - After adding variables, Railway will automatically redeploy
-   - Or manually trigger a redeploy
-
-## Testing
-
-### Test Password Reset:
-1. Go to sign-in page
-2. Click "Forgot Password?"
-3. Enter your email
-4. Check your email for reset link
-5. Click link and reset password
-
-### Test Email Verification:
-1. Sign up with a new account
-2. Check your email for verification link
-3. Click link to verify email
+### To Approve Users:
+1. Go to http://localhost:5173/admin/users
+2. Find pending users with "Pending Approval" status
+3. Click "Approve" to activate their account
 
 ## Troubleshooting
 
-### Emails Not Sending:
-1. Check Railway logs for email errors
-2. Verify environment variables are set correctly
-3. For Gmail: Make sure app password is correct (not your regular password)
-4. Check spam folder
+### "Failed to send verification email" Error
+- Make sure you're using an App Password, not your regular Gmail password
+- Check that 2-Factor Authentication is enabled on your Google account
+- Verify all email settings in .env are correct
+- Check backend console for detailed error messages
 
-### Token Expired:
-- Password reset tokens expire after 1 hour
-- Email verification tokens expire after 24 hours
-- Request a new token if expired
-
-### Frontend URL Issues:
-- Make sure `FRONTEND_URL` in Railway matches your Vercel URL exactly
-- Include `https://` in the URL
-- No trailing slash
-
-## Security Notes
-
-1. **Never commit email credentials to Git**
-2. **Use environment variables only**
-3. **For production, use a dedicated email service (SendGrid, AWS SES)**
-4. **Gmail app passwords are fine for development/testing**
-
-## Database Schema
-
-The following fields were added to the `users` table:
-- `email_verification_token` - Token for email verification
-- `password_reset_token` - Token for password reset
-- `password_reset_expires` - Expiration time for reset token
-
-These fields are already in your database schema and don't require migration.
-
+### Gmail blocks the email
+- Make sure "Less secure app access" is OFF (use App Passwords instead)
+- Check Gmail's "Blocked Account" settings
+- Try sending a test email from Gmail to verify your account is working

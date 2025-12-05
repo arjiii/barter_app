@@ -15,6 +15,7 @@
 		validateSignUpCredentials,
 		hasValidationErrors
 	} from '$lib/utils/validation';
+	import LocationPermissionModal from '../components/LocationPermissionModal.svelte';
 
 	// Form state
 	let formState = $state<FormState>({
@@ -32,6 +33,9 @@
 	let verificationStep = $state(false);
 	let otpCode = $state('');
 	let verificationEmail = $state('');
+
+	// Location permission state
+	let showLocationModal = $state(false);
 
 	// Form data
 	let formData = $state<any>({
@@ -111,18 +115,44 @@
 				? await authService.signUp(formData as SignUpCredentials)
 				: await authService.signIn(formData as LoginCredentials);
 
-			if (response.success && response.user) {
-				authStore.setUser(response.user);
-
+			if (response.success) {
 				if (formState.isSignUp) {
-					alert('Account created successfully! Please check your email for the verification code.');
+					// Check verification method
+					if (response.message && response.message.includes('admin')) {
+						alert('Registration request submitted! Please wait for admin approval.');
+						formState.isSignUp = false; // Switch to login
+						// Reset form
+						formData = {
+							email: '',
+							password: '',
+							confirmPassword: '',
+							name: '',
+							location: '',
+							rememberMe: false,
+							verificationMethod: 'email'
+						};
+						formState.isLoading = false;
+						return;
+					}
+
+					// For signup, we expect verification step next
+					// User is NOT logged in yet
+					alert('Verification code sent! Please check your email.');
 					verificationStep = true;
 					verificationEmail = formData.email;
 					formState.isLoading = false;
 					return;
 				}
 
-				await goto('/discovery');
+				// For signin, we expect user and token
+				if (response.user) {
+					authStore.setUser(response.user);
+					await goto('/discovery');
+				} else {
+					formState.errors = {
+						general: 'Login successful but user data missing.'
+					};
+				}
 			} else {
 				formState.errors = {
 					general: response.message || 'Authentication failed'
@@ -153,12 +183,14 @@
 			const response = await authService.verifyEmail(verificationEmail, otpCode);
 
 			if (response.success) {
-				// After verification, we can redirect to discovery
-				// We might need to refresh the user to get the verified status if we were using the token from signup
-				// But verifyEmail doesn't return a new token usually.
-				// However, the user is already "logged in" with the token from signup (which is valid but unverified)
-				// So we just redirect.
-				await goto('/discovery');
+				// After email verification, user is created and logged in
+				if (response.user) {
+					authStore.setUser(response.user);
+				}
+
+				// Show location permission modal
+				verificationStep = false;
+				showLocationModal = true;
 			} else {
 				formState.errors = {
 					general: response.message || 'Verification failed. Please check your code.'
@@ -172,6 +204,43 @@
 		} finally {
 			formState.isLoading = false;
 		}
+	}
+
+	async function handleLocationComplete(location: {
+		city: string;
+		radius: number;
+		lat: number;
+		lng: number;
+	}) {
+		try {
+			// Update user location via API
+			// We need to pass the name as well, which should be in formData
+			if (formData.name) {
+				await authService.updateProfile(formData.name, location.city, location.lat, location.lng);
+			}
+		} catch (error) {
+			console.error('Failed to update location:', error);
+		}
+
+		showLocationModal = false;
+		// Clear the auth token since user needs to sign in again
+		localStorage.removeItem('bayanihan_token');
+		authStore.clearAuth();
+
+		alert('Account verified successfully! Please sign in to continue.');
+		formState.isSignUp = false; // Switch to sign in mode
+		otpCode = ''; // Clear OTP
+	}
+
+	function handleLocationSkip() {
+		showLocationModal = false;
+		// Clear the auth token since user needs to sign in again
+		localStorage.removeItem('bayanihan_token');
+		authStore.clearAuth();
+
+		alert('Account verified! Please sign in to continue.');
+		formState.isSignUp = false; // Switch to sign in mode
+		otpCode = ''; // Clear OTP
 	}
 
 	async function handleForgotPassword(event: Event): Promise<void> {
@@ -369,6 +438,7 @@
 										onclick={detectLocation}
 										class="rounded-xl bg-[#e3d8cf] px-4 py-3 text-[#4d4138] transition-colors hover:bg-[#d9c7ba]"
 										title="Detect Location"
+										aria-label="Detect Location"
 									>
 										<svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 											<path
@@ -435,6 +505,7 @@
 									type="button"
 									class="absolute inset-y-0 right-3 my-auto text-gray-500 hover:text-gray-700"
 									onclick={() => (showPassword = !showPassword)}
+									aria-label={showPassword ? 'Hide password' : 'Show password'}
 								>
 									{#if showPassword}
 										<svg
@@ -501,6 +572,7 @@
 										type="button"
 										class="absolute inset-y-0 right-3 my-auto text-gray-500 hover:text-gray-700"
 										onclick={() => (showConfirmPassword = !showConfirmPassword)}
+										aria-label={showConfirmPassword ? 'Hide password' : 'Show password'}
 									>
 										{#if showConfirmPassword}
 											<svg
@@ -541,6 +613,42 @@
 								{#if formState.errors.confirmPassword}
 									<p class="mt-1 text-sm text-red-600">{formState.errors.confirmPassword}</p>
 								{/if}
+							</div>
+						{/if}
+
+						{#if formState.isSignUp}
+							<div class="mt-4 space-y-2">
+								<label class="mb-2 block text-xs uppercase tracking-[0.2em] text-[#8b6b55]">
+									Verification Method
+								</label>
+								<div class="flex flex-col space-y-2">
+									<div class="flex items-center space-x-2">
+										<input
+											type="radio"
+											id="verify-email"
+											name="verificationMethod"
+											value="email"
+											bind:group={formData.verificationMethod}
+											class="text-primary focus:ring-primary h-4 w-4 border-gray-300"
+										/>
+										<label for="verify-email" class="text-sm font-normal text-[#4d4138]"
+											>Verify via Email (Instant)</label
+										>
+									</div>
+									<div class="flex items-center space-x-2">
+										<input
+											type="radio"
+											id="verify-admin"
+											name="verificationMethod"
+											value="admin"
+											bind:group={formData.verificationMethod}
+											class="text-primary focus:ring-primary h-4 w-4 border-gray-300"
+										/>
+										<label for="verify-admin" class="text-sm font-normal text-[#4d4138]"
+											>Verify via Admin Request (Manual Approval)</label
+										>
+									</div>
+								</div>
 							</div>
 						{/if}
 
@@ -629,6 +737,7 @@
 						<button
 							type="button"
 							onclick={() => handleSocialLogin('google')}
+							aria-label="Sign in with Google"
 							class="inline-flex w-full justify-center rounded-xl border border-[#dfd4cb] bg-white/90 px-4 py-3 text-sm font-medium text-[#4b433d] transition-all duration-200 hover:bg-white"
 						>
 							<svg class="h-5 w-5" viewBox="0 0 24 24"
@@ -650,6 +759,7 @@
 						<button
 							type="button"
 							onclick={() => handleSocialLogin('apple')}
+							aria-label="Sign in with Apple"
 							class="inline-flex w-full justify-center rounded-xl border border-[#dfd4cb] bg-white/90 px-4 py-3 text-sm font-medium text-[#4b433d] transition-all duration-200 hover:bg-white"
 						>
 							<svg class="h-5 w-5" fill="currentColor" viewBox="0 0 24 24"
@@ -661,6 +771,7 @@
 						<button
 							type="button"
 							onclick={() => handleSocialLogin('facebook')}
+							aria-label="Sign in with Facebook"
 							class="inline-flex w-full justify-center rounded-xl border border-[#dfd4cb] bg-white/90 px-4 py-3 text-sm font-medium text-[#4b433d] transition-all duration-200 hover:bg-white"
 						>
 							<svg class="h-5 w-5" fill="currentColor" viewBox="0 0 24 24"
@@ -674,104 +785,117 @@
 			</div>
 		</div>
 	</div>
+</div>
 
-	<!-- Forgot Password Modal -->
-	{#if showForgotPassword}
+<!-- Forgot Password Modal -->
+{#if showForgotPassword}
+	<div
+		class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm"
+		role="dialog"
+		aria-labelledby="forgot-password-title"
+		onclick={() => {
+			if (!forgotPasswordSent) showForgotPassword = false;
+		}}
+		onkeydown={(e) => e.key === 'Escape' && !forgotPasswordSent && (showForgotPassword = false)}
+	>
 		<div
-			class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm"
-			onclick={() => {
-				if (!forgotPasswordSent) showForgotPassword = false;
-			}}
+			class="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl"
+			onclick={(e) => e.stopPropagation()}
+			role="document"
 		>
-			<div
-				class="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl"
-				onclick={(e) => e.stopPropagation()}
-			>
-				{#if !forgotPasswordSent}
-					<h2 class="mb-4 text-2xl font-semibold text-[#1f1b17]">Forgot Password?</h2>
-					<p class="mb-6 text-sm text-[#6c6b69]">
-						Enter your email address and we'll send you a link to reset your password.
-					</p>
-					<form onsubmit={handleForgotPassword} class="space-y-4">
-						<div>
-							<label
-								for="forgot-email"
-								class="mb-2 block text-xs uppercase tracking-[0.2em] text-[#8b6b55]"
-							>
-								Email Address
-							</label>
-							<input
-								id="forgot-email"
-								type="email"
-								bind:value={forgotPasswordEmail}
-								required
-								class="w-full rounded-xl border border-[#e3d8cf] bg-[#fdf9f6] px-4 py-3 text-[#2d261f] transition-colors focus:border-[#ff855a] focus:outline-none focus:ring-2 focus:ring-[#ffb797]"
-								placeholder="Enter your email"
-							/>
-						</div>
-						{#if formState.errors.general}
-							<div class="rounded-lg border border-red-400 bg-red-100 p-3 text-sm text-red-700">
-								{formState.errors.general}
-							</div>
-						{/if}
-						<div class="flex gap-3">
-							<button
-								type="button"
-								onclick={() => {
-									showForgotPassword = false;
-									forgotPasswordEmail = '';
-									formState.errors = {};
-								}}
-								class="flex-1 rounded-xl border border-[#e3d8cf] px-4 py-3 text-[#4d4138] transition-colors hover:bg-[#fdf9f6]"
-							>
-								Cancel
-							</button>
-							<button
-								type="submit"
-								disabled={formState.isLoading}
-								class="flex-1 rounded-xl bg-[#1f1b17] px-4 py-3 font-semibold text-white transition-colors hover:bg-black disabled:cursor-not-allowed disabled:opacity-50"
-							>
-								{formState.isLoading ? 'Sending...' : 'Send Reset Link'}
-							</button>
-						</div>
-					</form>
-				{:else}
-					<div class="text-center">
-						<div
-							class="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-green-100"
+			{#if !forgotPasswordSent}
+				<h2 id="forgot-password-title" class="mb-4 text-2xl font-semibold text-[#1f1b17]">
+					Forgot Password?
+				</h2>
+				<p class="mb-6 text-sm text-[#6c6b69]">
+					Enter your email address and we'll send you a link to reset your password.
+				</p>
+				<form onsubmit={handleForgotPassword} class="space-y-4">
+					<div>
+						<label
+							for="forgot-email"
+							class="mb-2 block text-xs uppercase tracking-[0.2em] text-[#8b6b55]"
 						>
-							<svg
-								class="h-8 w-8 text-green-600"
-								fill="none"
-								stroke="currentColor"
-								viewBox="0 0 24 24"
-							>
-								<path
-									stroke-linecap="round"
-									stroke-linejoin="round"
-									stroke-width="2"
-									d="M5 13l4 4L19 7"
-								></path>
-							</svg>
+							Email Address
+						</label>
+						<input
+							id="forgot-email"
+							type="email"
+							bind:value={forgotPasswordEmail}
+							required
+							class="w-full rounded-xl border border-[#e3d8cf] bg-[#fdf9f6] px-4 py-3 text-[#2d261f] transition-colors focus:border-[#ff855a] focus:outline-none focus:ring-2 focus:ring-[#ffb797]"
+							placeholder="Enter your email"
+						/>
+					</div>
+					{#if formState.errors.general}
+						<div class="rounded-lg border border-red-400 bg-red-100 p-3 text-sm text-red-700">
+							{formState.errors.general}
 						</div>
-						<h2 class="mb-2 text-2xl font-semibold text-[#1f1b17]">Check Your Email</h2>
-						<p class="mb-6 text-sm text-[#6c6b69]">
-							We've sent a password reset link to <strong>{forgotPasswordEmail}</strong>
-						</p>
+					{/if}
+					<div class="flex gap-3">
 						<button
+							type="button"
 							onclick={() => {
 								showForgotPassword = false;
 								forgotPasswordEmail = '';
-								forgotPasswordSent = false;
 								formState.errors = {};
 							}}
-							class="w-full rounded-xl bg-[#1f1b17] px-4 py-3 font-semibold text-white transition-colors hover:bg-black"
+							class="flex-1 rounded-xl border border-[#e3d8cf] px-4 py-3 text-[#4d4138] transition-colors hover:bg-[#fdf9f6]"
 						>
-							Close
+							Cancel
+						</button>
+						<button
+							type="submit"
+							disabled={formState.isLoading}
+							class="flex-1 rounded-xl bg-[#1f1b17] px-4 py-3 font-semibold text-white transition-colors hover:bg-black disabled:cursor-not-allowed disabled:opacity-50"
+						>
+							{formState.isLoading ? 'Sending...' : 'Send Reset Link'}
 						</button>
 					</div>
-				{/if}
-			</div>
+				</form>
+			{:else}
+				<div class="text-center">
+					<div
+						class="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-green-100"
+					>
+						<svg
+							class="h-8 w-8 text-green-600"
+							fill="none"
+							stroke="currentColor"
+							viewBox="0 0 24 24"
+						>
+							<path
+								stroke-linecap="round"
+								stroke-linejoin="round"
+								stroke-width="2"
+								d="M5 13l4 4L19 7"
+							></path>
+						</svg>
+					</div>
+					<h2 class="mb-2 text-2xl font-semibold text-[#1f1b17]">Check Your Email</h2>
+					<p class="mb-6 text-sm text-[#6c6b69]">
+						We've sent a password reset link to <strong>{forgotPasswordEmail}</strong>
+					</p>
+					<button
+						onclick={() => {
+							showForgotPassword = false;
+							forgotPasswordEmail = '';
+							forgotPasswordSent = false;
+							formState.errors = {};
+						}}
+						class="w-full rounded-xl bg-[#1f1b17] px-4 py-3 font-semibold text-white transition-colors hover:bg-black"
+					>
+						Close
+					</button>
+				</div>
+			{/if}
 		</div>
-	{/if}
-</div>
+	</div>
+{/if}
+
+<!-- Location Permission Modal -->
+<LocationPermissionModal
+	isOpen={showLocationModal}
+	onComplete={handleLocationComplete}
+	onSkip={handleLocationSkip}
+/>

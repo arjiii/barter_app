@@ -15,6 +15,7 @@ class ItemService {
 				category: itemData.category,
 				condition: itemData.condition,
 				images: itemData.images,
+				specs: itemData.specs,
 				location: itemData.location,
 				status: 'available'
 			};
@@ -24,7 +25,7 @@ class ItemService {
 			// Check if we have a token
 			const token = localStorage.getItem('bayanihan_token');
 			console.log('Token for API call:', token ? 'Present' : 'Missing');
-			
+
 			if (!token) {
 				throw new Error('No authentication token found');
 			}
@@ -33,7 +34,7 @@ class ItemService {
 			console.log('API response:', created);
 
 			return this.mapApiItemToItem(created);
-		} catch (error) {
+		} catch (error: any) {
 			console.error('Error creating item:', error);
 			console.error('Error details:', {
 				message: error.message,
@@ -48,7 +49,7 @@ class ItemService {
 		try {
 			const item = await api.get<any>(`/items/${id}`);
 			return this.mapApiItemToItem(item);
-		} catch (error) {
+		} catch (error: any) {
 			console.error('Error getting item by ID:', error);
 			return null;
 		}
@@ -67,7 +68,7 @@ class ItemService {
 				mapped = mapped.filter(item => item.title.toLowerCase().includes(searchTerm) || item.description.toLowerCase().includes(searchTerm));
 			}
 			return mapped;
-		} catch (error) {
+		} catch (error: any) {
 			console.error('Error getting items:', error);
 			return [];
 		}
@@ -80,7 +81,7 @@ class ItemService {
 				location: updates.location
 			});
 			return this.mapApiItemToItem(updated);
-		} catch (error) {
+		} catch (error: any) {
 			console.error('Error updating item:', error);
 			return null;
 		}
@@ -92,7 +93,7 @@ class ItemService {
 			const headers: Record<string, string> = {
 				'Content-Type': 'application/json'
 			};
-			
+
 			// Only include Authorization header for JWT tokens (not UUID tokens from offline mode)
 			if (token) {
 				const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -100,13 +101,13 @@ class ItemService {
 					headers['Authorization'] = `Bearer ${token}`;
 				}
 			}
-			
+
 			const response = await fetch(`${API_BASE_URL}/items/${id}`, {
 				method: 'DELETE',
 				headers
 			});
 			return response.ok;
-		} catch (error) {
+		} catch (error: any) {
 			console.error('Error deleting item:', error);
 			return false;
 		}
@@ -122,7 +123,7 @@ class ItemService {
 				icon: cat.icon,
 				createdAt: cat.created_at ? new Date(cat.created_at) : new Date()
 			}));
-		} catch (error) {
+		} catch (error: any) {
 			console.error('Error getting categories:', error);
 			return [];
 		}
@@ -138,7 +139,7 @@ class ItemService {
 				icon: created.icon,
 				createdAt: created.created_at ? new Date(created.created_at) : new Date()
 			};
-		} catch (error) {
+		} catch (error: any) {
 			console.error('Error creating category:', error);
 			return null;
 		}
@@ -168,7 +169,7 @@ class ItemService {
 		try {
 			if (Array.isArray(apiItem.images)) images = apiItem.images;
 			else if (typeof apiItem.images === 'string' && apiItem.images.trim()) images = JSON.parse(apiItem.images);
-		} catch {}
+		} catch { }
 		const createdAt = apiItem.created_at ? new Date(apiItem.created_at) : new Date();
 		return {
 			id: apiItem.id,
@@ -178,6 +179,7 @@ class ItemService {
 			category: apiItem.category ?? '',
 			condition: apiItem.condition ?? '',
 			images,
+			specs: apiItem.specs || {},
 			location: apiItem.location || undefined,
 			status: apiItem.status,
 			views: apiItem.views ?? 0,
@@ -189,7 +191,9 @@ class ItemService {
 				? apiItem.owner
 				: (apiItem.owner_name && apiItem.owner_id)
 					? { id: apiItem.owner_id, name: apiItem.owner_name }
-					: undefined
+					: undefined,
+			latitude: apiItem.latitude,
+			longitude: apiItem.longitude
 		};
 	}
 }

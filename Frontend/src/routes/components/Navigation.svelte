@@ -1,16 +1,16 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { goto } from '$app/navigation';
+	import { goto, invalidateAll } from '$app/navigation';
 	import { page } from '$app/stores';
 	import { authStore } from '$lib/stores/authStore';
 	import { authService } from '$lib/services/authService';
-import { navigationConfig } from '$lib/config/navigation';
-import { notificationStore } from '$lib/stores/notificationStore';
+	import { navigationConfig } from '$lib/config/navigation';
+	import { notificationStore } from '$lib/stores/notificationStore';
 	import type { NavigationState, NavItem, UserMenu } from '$lib/types/navigation';
 	import type { User } from '$lib/types/auth';
 
 	let { children } = $props();
-	
+
 	let user: User | null = $state(null);
 	let isLoading = $state(true);
 	let isAuthenticated = $state(false);
@@ -31,28 +31,30 @@ import { notificationStore } from '$lib/stores/notificationStore';
 	// Current page
 	let currentPath = $derived($page.url.pathname);
 
-let notificationsOpen = $state(false);
-let notifications = $derived($state.snapshot(notificationStore));
+	let notificationsOpen = $state(false);
+	let notifications = $derived($notificationStore);
 
 	/**
 	 * Handle navigation item click
 	 */
-	function handleNavClick(item: NavItem): void {
+	async function handleNavClick(item: NavItem): Promise<void> {
 		if (item.requiresAuth && !isAuthenticated) {
-			goto('/sign-in-up');
+			await goto('/sign-in-up');
 			return;
 		}
-		
+
 		// Handle sign out action
 		if (item.id === 'signout') {
 			handleSignOut();
 			return;
 		}
-		
+
 		if (item.href) {
-			goto(item.href);
+			// Invalidate all data to force fresh fetch
+			await invalidateAll();
+			await goto(item.href, { replaceState: false, invalidateAll: true });
 		}
-		
+
 		// Close mobile menu
 		navState.mobileMenuOpen = false;
 	}
@@ -60,13 +62,14 @@ let notifications = $derived($state.snapshot(notificationStore));
 	/**
 	 * Handle user menu action
 	 */
-	function handleUserMenuAction(item: UserMenu): void {
+	async function handleUserMenuAction(item: UserMenu): Promise<void> {
 		if (item.action) {
 			item.action();
 		} else if (item.href) {
-			goto(item.href);
+			await invalidateAll();
+			await goto(item.href, { replaceState: false, invalidateAll: true });
 		}
-		
+
 		navState.userMenuOpen = false;
 	}
 
@@ -128,10 +131,12 @@ let notifications = $derived($state.snapshot(notificationStore));
 	}
 
 	// Update user menu actions
-	let userMenuItems = $derived(navigationConfig.user.map(item => ({
-		...item,
-		action: item.id === 'signout' ? handleSignOut : undefined
-	})));
+	let userMenuItems = $derived(
+		navigationConfig.user.map((item) => ({
+			...item,
+			action: item.id === 'signout' ? handleSignOut : undefined
+		}))
+	);
 
 	onMount(() => {
 		// Subscribe to auth store
@@ -155,7 +160,13 @@ let notifications = $derived($state.snapshot(notificationStore));
 		// Close menus when clicking outside
 		const handleClickOutside = (event: MouseEvent) => {
 			const target = event.target as HTMLElement;
-			if (!target.closest('.user-menu') && !target.closest('.mobile-menu') && !target.closest('.sidebar') && !target.closest('.notif-btn') && !target.closest('.notif-panel')) {
+			if (
+				!target.closest('.user-menu') &&
+				!target.closest('.mobile-menu') &&
+				!target.closest('.sidebar') &&
+				!target.closest('.notif-btn') &&
+				!target.closest('.notif-panel')
+			) {
 				closeAllMenus();
 				notificationsOpen = false;
 			}
@@ -176,49 +187,72 @@ let notifications = $derived($state.snapshot(notificationStore));
 <!-- Sidebar Navigation -->
 <div class="flex h-screen bg-[var(--canvas)] text-[var(--text-muted)]">
 	<!-- Sidebar -->
-	<div class={`sidebar inset-y-0 left-0 z-50 bg-[color:var(--surface-1)] border-r border-[color:var(--border-soft)] shadow-xl transform transition-all duration-300 ease-in-out fixed lg:static ${sidebarOpen ? 'w-72 translate-x-0 pointer-events-auto' : 'w-0 -translate-x-full pointer-events-none'} overflow-hidden`}>
+	<div
+		class={`sidebar fixed inset-y-0 left-0 z-50 transform border-r border-[color:var(--border-soft)] bg-[color:var(--surface-1)] shadow-xl transition-all duration-300 ease-in-out lg:static ${sidebarOpen ? 'pointer-events-auto w-72 translate-x-0' : 'pointer-events-none w-0 -translate-x-full'} overflow-hidden`}
+	>
 		<!-- Sidebar Header -->
-		<div class="flex items-center justify-between min-h-16 px-6 py-2 border-b border-[color:var(--border-soft)] bg-gradient-to-r from-[color:var(--surface-3)] to-[color:var(--surface-2)]">
-			<button 
+		<div
+			class="flex min-h-16 items-center justify-between border-b border-[color:var(--border-soft)] bg-gradient-to-r from-[color:var(--surface-3)] to-[color:var(--surface-2)] px-6 py-2"
+		>
+			<button
 				onclick={() => goto('/')}
-				class="flex items-center space-x-3 hover:opacity-90 transition-opacity overflow-hidden text-[var(--text-primary)]"
+				class="flex items-center space-x-3 overflow-hidden text-[var(--text-primary)] transition-opacity hover:opacity-90"
 			>
-				<div class="w-10 h-10 bg-white bg-opacity-60 rounded-lg flex items-center justify-center backdrop-blur-sm flex-shrink-0">
-					<svg class="h-6 w-6 text-[var(--accent)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
+				<div
+					class="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-white bg-opacity-60 backdrop-blur-sm"
+				>
+					<svg
+						class="h-6 w-6 text-[var(--accent)]"
+						fill="none"
+						stroke="currentColor"
+						viewBox="0 0 24 24"
+					>
+						<path
+							stroke-linecap="round"
+							stroke-linejoin="round"
+							stroke-width="2"
+							d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
+						></path>
 					</svg>
 				</div>
-				<div class="hidden lg:block leading-tight">
+				<div class="hidden leading-tight lg:block">
 					<h1 class="text-xl font-bold text-[var(--text-primary)]">Bayanihan Exchange</h1>
-					<p class="text-xs text-[var(--text-muted)] mt-0.5">Community Barter App</p>
+					<p class="mt-0.5 text-xs text-[var(--text-muted)]">Community Barter App</p>
 				</div>
 			</button>
-			
+
 			<!-- Close button for mobile -->
 			<button
 				onclick={toggleSidebar}
-				class="lg:hidden p-2 rounded-lg text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-white hover:bg-opacity-60 transition-colors"
+				class="rounded-lg p-2 text-[var(--text-muted)] transition-colors hover:bg-white hover:bg-opacity-60 hover:text-[var(--text-primary)] lg:hidden"
 				aria-label="Close sidebar"
 			>
 				<svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-					<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+					<path
+						stroke-linecap="round"
+						stroke-linejoin="round"
+						stroke-width="2"
+						d="M6 18L18 6M6 6l12 12"
+					></path>
 				</svg>
 			</button>
 		</div>
 
 		<!-- User Profile Section (Top) -->
 		{#if isAuthenticated && user}
-			<div class="px-4 py-4 border-b border-[color:var(--border-soft)]">
-				<div class="flex items-center space-x-3 p-3 rounded-2xl bg-white/80 backdrop-blur">
-					<div class="w-12 h-12 bg-gradient-to-r from-[color:var(--accent)] to-[color:var(--accent-strong)] rounded-full flex items-center justify-center shadow-md shadow-[color:var(--accent)]/30 text-white">
+			<div class="border-b border-[color:var(--border-soft)] px-4 py-4">
+				<div class="flex items-center space-x-3 rounded-2xl bg-white/80 p-3 backdrop-blur">
+					<div
+						class="shadow-[color:var(--accent)]/30 flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-r from-[color:var(--accent)] to-[color:var(--accent-strong)] text-white shadow-md"
+					>
 						<span class="text-base font-semibold">
 							{user.name.charAt(0).toUpperCase()}
 						</span>
 					</div>
-					<div class="flex-1 min-w-0">
-						<p class="text-sm font-semibold text-[var(--text-primary)] truncate">{user.name}</p>
+					<div class="min-w-0 flex-1">
+						<p class="truncate text-sm font-semibold text-[var(--text-primary)]">{user.name}</p>
 						<div class="flex items-center space-x-1">
-							<div class="w-2 h-2 bg-green-500 rounded-full"></div>
+							<div class="h-2 w-2 rounded-full bg-green-500"></div>
 							<p class="text-xs text-[var(--text-muted)]">Online</p>
 						</div>
 					</div>
@@ -227,32 +261,39 @@ let notifications = $derived($state.snapshot(notificationStore));
 		{/if}
 
 		<!-- Navigation Menu -->
-		<nav class="flex-1 px-4 py-6 space-y-1 overflow-y-auto">
+		<nav class="flex-1 space-y-1 overflow-y-auto px-4 py-6">
 			{#each navigationConfig.main as item}
 				{#if item.divider}
-					<div class="border-t border-gray-200 my-3"></div>
+					<div class="my-3 border-t border-gray-200"></div>
 				{:else}
 					<button
 						onclick={() => handleNavClick(item)}
-						class="flex items-center space-x-3 w-full px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 group
-							{currentPath === item.href 
-								? 'bg-[color:var(--surface-2)] text-[var(--text-primary)] border border-[color:var(--border-soft)] shadow-sm' 
-								: item.id === 'signout'
-									? 'text-[var(--danger)] hover:bg-[color:var(--surface-2)] font-semibold'
-									: 'text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[color:var(--surface-2)]'}"
+						class="group flex w-full items-center space-x-3 rounded-xl px-4 py-3 text-sm font-medium transition-all duration-200
+							{currentPath === item.href
+							? 'border border-[color:var(--border-soft)] bg-[color:var(--surface-2)] text-[var(--text-primary)] shadow-sm'
+							: item.id === 'signout'
+								? 'font-semibold text-[var(--danger)] hover:bg-[color:var(--surface-2)]'
+								: 'text-[var(--text-muted)] hover:bg-[color:var(--surface-2)] hover:text-[var(--text-primary)]'}"
 					>
-						<svg class="h-5 w-5 transition-colors
-							{currentPath === item.href 
-								? 'text-[var(--accent)]' 
+						<svg
+							class="h-5 w-5 transition-colors
+							{currentPath === item.href
+								? 'text-[var(--accent)]'
 								: item.id === 'signout'
 									? 'text-[var(--danger)]'
-									: 'text-[var(--text-muted)] group-hover:text-[var(--text-primary)]'}" 
-							fill="none" stroke="currentColor" viewBox="0 0 24 24">
-							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d={item.icon}></path>
+									: 'text-[var(--text-muted)] group-hover:text-[var(--text-primary)]'}"
+							fill="none"
+							stroke="currentColor"
+							viewBox="0 0 24 24"
+						>
+							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d={item.icon}
+							></path>
 						</svg>
 						<span class="flex-1 text-left">{item.label}</span>
 						{#if item.badge !== undefined && item.badge > 0}
-							<span class="bg-[color:var(--accent)] text-white text-xs rounded-full px-2 py-1 min-w-[20px] text-center font-semibold">
+							<span
+								class="min-w-[20px] rounded-full bg-[color:var(--accent)] px-2 py-1 text-center text-xs font-semibold text-white"
+							>
 								{item.badge}
 							</span>
 						{/if}
@@ -267,14 +308,11 @@ let notifications = $derived($state.snapshot(notificationStore));
 				<div class="space-y-3">
 					<button
 						onclick={() => goto('/sign-in-up')}
-						class="w-full text-[var(--text-muted)] hover:text-[var(--text-primary)] px-4 py-2.5 rounded-lg text-sm font-medium transition-colors hover:bg-[color:var(--surface-2)] border border-[color:var(--border-soft)]"
+						class="w-full rounded-lg border border-[color:var(--border-soft)] px-4 py-2.5 text-sm font-medium text-[var(--text-muted)] transition-colors hover:bg-[color:var(--surface-2)] hover:text-[var(--text-primary)]"
 					>
 						Sign In
 					</button>
-					<button
-						onclick={() => goto('/sign-in-up')}
-						class="w-full btn-primary text-center"
-					>
+					<button onclick={() => goto('/sign-in-up')} class="btn-primary w-full text-center">
 						Sign Up
 					</button>
 				</div>
@@ -283,17 +321,24 @@ let notifications = $derived($state.snapshot(notificationStore));
 	</div>
 
 	<!-- Main Content Area -->
-	<div class="flex-1 flex flex-col overflow-hidden bg-[var(--canvas)]">
+	<div class="flex flex-1 flex-col overflow-hidden bg-[var(--canvas)]">
 		<!-- Top Bar -->
-		<header class="bg-[color:var(--surface-1)] border-b border-[color:var(--border-soft)] h-16 flex items-center justify-between px-4 lg:px-6 shadow-sm">
+		<header
+			class="flex h-16 items-center justify-between border-b border-[color:var(--border-soft)] bg-[color:var(--surface-1)] px-4 shadow-sm lg:px-6"
+		>
 			<!-- Toggle Button -->
 			<button
 				onclick={toggleSidebar}
-				class="p-2 rounded-lg text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[color:var(--surface-2)] transition-colors"
+				class="rounded-lg p-2 text-[var(--text-muted)] transition-colors hover:bg-[color:var(--surface-2)] hover:text-[var(--text-primary)]"
 				aria-label="Toggle sidebar"
 			>
 				<svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-					<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+					<path
+						stroke-linecap="round"
+						stroke-linejoin="round"
+						stroke-width="2"
+						d="M4 6h16M4 12h16M4 18h16"
+					></path>
 				</svg>
 			</button>
 
@@ -317,35 +362,60 @@ let notifications = $derived($state.snapshot(notificationStore));
 			</div>
 
 			<!-- Right side actions -->
-			<div class="flex items-center space-x-2 relative">
+			<div class="relative flex items-center space-x-2">
 				<!-- Search button for mobile -->
-				<button class="p-2 rounded-lg text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[color:var(--surface-2)] transition-colors lg:hidden">
+				<button
+					class="rounded-lg p-2 text-[var(--text-muted)] transition-colors hover:bg-[color:var(--surface-2)] hover:text-[var(--text-primary)] lg:hidden"
+				>
 					<svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+						<path
+							stroke-linecap="round"
+							stroke-linejoin="round"
+							stroke-width="2"
+							d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+						></path>
 					</svg>
 				</button>
-				
+
 				<!-- Notifications -->
 				<div class="relative">
-					<button class="p-2 rounded-lg text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[color:var(--surface-2)] transition-colors relative notif-btn" onclick={() => notificationsOpen = !notificationsOpen} aria-label="Notifications">
+					<button
+						class="notif-btn relative rounded-lg p-2 text-[var(--text-muted)] transition-colors hover:bg-[color:var(--surface-2)] hover:text-[var(--text-primary)]"
+						onclick={() => (notificationsOpen = !notificationsOpen)}
+						aria-label="Notifications"
+					>
 						<svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-5 5v-5zM4 19h6v-6H4v6zM4 5h6V1H4v4zM15 7h5l-5-5v5z"></path>
+							<path
+								stroke-linecap="round"
+								stroke-linejoin="round"
+								stroke-width="2"
+								d="M15 17h5l-5 5v-5zM4 19h6v-6H4v6zM4 5h6V1H4v4zM15 7h5l-5-5v5z"
+							></path>
 						</svg>
-						<span class="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full"></span>
+						<span class="absolute -right-1 -top-1 h-3 w-3 rounded-full bg-red-500"></span>
 					</button>
 					{#if notificationsOpen}
-						<div class="notif-panel absolute right-0 mt-2 w-80 bg-[color:var(--surface-1)] border border-[color:var(--border-soft)] rounded-2xl shadow-2xl overflow-hidden z-50">
-							<div class="px-4 py-3 border-b border-[color:var(--border-soft)] bg-[color:var(--surface-2)] font-semibold text-[var(--text-primary)]">Notifications</div>
-							<ul class="max-h-80 overflow-auto divide-y divide-[color:var(--border-soft)]">
+						<div
+							class="notif-panel absolute right-0 z-50 mt-2 w-80 overflow-hidden rounded-2xl border border-[color:var(--border-soft)] bg-[color:var(--surface-1)] shadow-2xl"
+						>
+							<div
+								class="border-b border-[color:var(--border-soft)] bg-[color:var(--surface-2)] px-4 py-3 font-semibold text-[var(--text-primary)]"
+							>
+								Notifications
+							</div>
+							<ul class="max-h-80 divide-y divide-[color:var(--border-soft)] overflow-auto">
 								{#each notifications as n}
-									<li class="px-4 py-3 hover:bg-[color:var(--surface-2)] transition-colors">
+									<li class="px-4 py-3 transition-colors hover:bg-[color:var(--surface-2)]">
 										<p class="text-sm text-[var(--text-primary)]">{n.title}</p>
-										<p class="text-xs text-[var(--text-muted)] mt-0.5">{n.time}</p>
+										<p class="mt-0.5 text-xs text-[var(--text-muted)]">{n.time}</p>
 									</li>
 								{/each}
 							</ul>
-							<div class="px-4 py-2 bg-[color:var(--surface-2)] text-right">
-								<button class="text-sm text-[var(--accent)] hover:text-[var(--accent-strong)] font-medium" onclick={() => notificationsOpen = false}>Close</button>
+							<div class="bg-[color:var(--surface-2)] px-4 py-2 text-right">
+								<button
+									class="text-sm font-medium text-[var(--accent)] hover:text-[var(--accent-strong)]"
+									onclick={() => (notificationsOpen = false)}>Close</button
+								>
 							</div>
 						</div>
 					{/if}
@@ -354,7 +424,7 @@ let notifications = $derived($state.snapshot(notificationStore));
 		</header>
 
 		<!-- Page Content will be inserted here -->
-		<main class="flex-1 overflow-auto px-4 lg:px-8 py-6 bg-[var(--canvas)]">
+		<main class="flex-1 overflow-auto bg-[var(--canvas)] px-4 py-6 lg:px-8">
 			{@render children?.()}
 		</main>
 	</div>
@@ -362,8 +432,8 @@ let notifications = $derived($state.snapshot(notificationStore));
 
 <!-- Mobile Overlay -->
 {#if sidebarOpen && isMobile}
-	<div 
-		class="fixed inset-0 bg-black/70 backdrop-blur-sm z-40 lg:hidden transition-opacity duration-300"
+	<div
+		class="fixed inset-0 z-40 bg-black/70 backdrop-blur-sm transition-opacity duration-300 lg:hidden"
 		onclick={toggleSidebar}
 		role="button"
 		tabindex="0"

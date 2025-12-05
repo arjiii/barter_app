@@ -6,7 +6,10 @@ export interface Item {
 	category: string;
 	condition: string;
 	images: string[];
+	specs?: Record<string, string>;
 	location?: string;
+	latitude?: number;
+	longitude?: number;
 	status: 'available' | 'traded' | 'removed' | 'draft' | 'pending';
 	views: number;
 	createdAt: Date;
@@ -20,6 +23,7 @@ export interface Item {
 	};
 	offersCount?: number;
 	postedAgo?: string;
+	distance?: number; // Distance from user in kilometers (computed client-side)
 }
 
 export interface Category {
@@ -36,7 +40,10 @@ export interface CreateItemData {
 	category: string;
 	condition: string;
 	images: string[];
+	specs?: Record<string, string>;
 	location?: string;
+	latitude?: number;
+	longitude?: number;
 }
 
 export interface UpdateItemData {

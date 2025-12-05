@@ -123,23 +123,27 @@ def list_items(
 
 @router.post("/", response_model=schemas.Item)
 def create_item(payload: dict, db: Session = Depends(get_db)):
-	obj = models.Item(
-		id=str(uuid4()),
-		user_id=payload["user_id"],
-		title=payload["title"],
-		description=payload.get("description"),
-		category=payload.get("category"),
-		condition=payload.get("condition"),
-		images=payload.get("images"),
-		location=payload.get("location"),
-		latitude=payload.get("latitude"),
-		longitude=payload.get("longitude"),
-		status=payload.get("status", "available"),
-	)
-	db.add(obj)
-	db.commit()
-	db.refresh(obj)
-	return obj
+	try:
+		obj = models.Item(
+			id=str(uuid4()),
+			user_id=payload["user_id"],
+			title=payload["title"],
+			description=payload.get("description"),
+			category=payload.get("category"),
+			condition=payload.get("condition"),
+			images=payload.get("images"),
+			specs=payload.get("specs"),
+			location=payload.get("location"),
+			latitude=payload.get("latitude"),
+			longitude=payload.get("longitude"),
+			status=payload.get("status", "available"),
+		)
+		db.add(obj)
+		db.commit()
+		db.refresh(obj)
+		return obj
+	except Exception as e:
+		raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")
 
 
 @router.get("/{item_id}")

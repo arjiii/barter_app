@@ -27,6 +27,11 @@ class Settings(BaseSettings):
 	
 	# Frontend URL for email links
 	FRONTEND_URL: str = os.getenv("FRONTEND_URL", "http://localhost:5173")
+	
+	# Supabase configuration
+	SUPABASE_URL: str = os.getenv("SUPABASE_URL", "")
+	SUPABASE_ANON_KEY: str = os.getenv("SUPABASE_ANON_KEY", "")
+
 
 	class Config:
 		env_file = ".env"

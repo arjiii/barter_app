@@ -190,11 +190,13 @@ class AuthService {
                 id: apiUser.id,
                 email: apiUser.email,
                 name: apiUser.name,
-                isVerified: true,
-                role: 'user' as const,
+                isVerified: apiUser.is_verified ?? true,
+                role: apiUser.role || 'user',
                 createdAt: new Date(),
                 lastLoginAt: new Date(),
-                location: apiUser.location || undefined
+                location: apiUser.location || undefined,
+                latitude: apiUser.latitude,
+                longitude: apiUser.longitude
             };
 
             if (!user) {
@@ -229,14 +231,19 @@ class AuthService {
         }
     }
 
-    async updateProfile(name: string, location?: string): Promise<User | null> {
+    async updateProfile(name: string, location?: string, latitude?: number, longitude?: number): Promise<User | null> {
         try {
             const token = this.getToken();
             if (!token || this.isUuidToken(token)) return null; // UUID tokens are for offline mode only
             const res = await fetch(`${API_BASE_URL}/auth/profile`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-                body: JSON.stringify({ name, location: location || '' })
+                body: JSON.stringify({
+                    name,
+                    location: location || '',
+                    latitude,
+                    longitude
+                })
             });
             if (!res.ok) return null;
             const apiUser = await res.json();
@@ -249,6 +256,8 @@ class AuthService {
                 createdAt: new Date(),
                 lastLoginAt: new Date(),
                 location: apiUser.location || undefined,
+                latitude: apiUser.latitude,
+                longitude: apiUser.longitude
             };
             return user;
         } catch (e) {
@@ -315,7 +324,7 @@ class AuthService {
     /**
      * Verify email using OTP
      */
-    async verifyEmail(email: string, otp: string): Promise<{ success: boolean; message: string }> {
+    async verifyEmail(email: string, otp: string): Promise<{ success: boolean; message: string; token?: string; user?: User }> {
         try {
             const res = await fetch(`${API_BASE_URL}/auth/verify-email`, {
                 method: 'POST',
@@ -326,6 +335,23 @@ class AuthService {
             if (!res.ok) {
                 return { success: false, message: data.detail || data.message || 'Email verification failed' };
             }
+
+            if (data.token && data.user) {
+                localStorage.setItem('bayanihan_token', data.token);
+                const user = {
+                    id: data.user.id,
+                    email: data.user.email,
+                    name: data.user.name,
+                    isVerified: true,
+                    role: data.user.role || 'user',
+                    createdAt: new Date(),
+                    location: data.user.location || undefined,
+                    latitude: data.user.latitude,
+                    longitude: data.user.longitude
+                };
+                return { success: true, message: data.message || 'Email verified successfully', token: data.token, user };
+            }
+
             return { success: true, message: data.message || 'Email verified successfully' };
         } catch (e) {
             console.error('Verify email error:', e);
@@ -364,7 +390,8 @@ class AuthService {
                     password: credentials.password,
                     location: credentials.location,
                     latitude: credentials.latitude,
-                    longitude: credentials.longitude
+                    longitude: credentials.longitude,
+                    verification_method: credentials.verificationMethod || 'email'
                 })
             });
             if (!res.ok) {
@@ -407,25 +434,37 @@ class AuthService {
                 localStorage.setItem('bayanihan_token', token);
                 return { success: true, user, token, message: 'Registration successful (offline mode)' };
             }
-            const data = await res.json();
-            const { user: apiUser, token } = data;
-            const user = {
-                id: apiUser.id,
-                email: apiUser.email,
-                name: apiUser.name,
-                isVerified: true,
-                role: 'user' as const,
-                createdAt: new Date(),
-                location: apiUser.location || undefined
-            };
-            localStorage.setItem('bayanihan_token', token);
 
+            const data = await res.json();
+
+            // If backend returns token (legacy or immediate login), use it
+            if (data.token && data.user) {
+                const { user: apiUser, token } = data;
+                const user = {
+                    id: apiUser.id,
+                    email: apiUser.email,
+                    name: apiUser.name,
+                    isVerified: true,
+                    role: 'user' as const,
+                    createdAt: new Date(),
+                    location: apiUser.location || undefined
+                };
+                localStorage.setItem('bayanihan_token', token);
+
+                return {
+                    success: true,
+                    user,
+                    token,
+                    message: 'Registration successful',
+                };
+            }
+
+            // New flow: No token yet, just success message
             return {
                 success: true,
-                user,
-                token,
-                message: 'Registration successful',
+                message: data.message || 'Verification code sent',
             };
+
         } catch (error) {
             console.error('Sign up error:', error);
             // Network error: create local account as fallback
@@ -484,10 +523,12 @@ class AuthService {
                 id: apiUser.id,
                 email: apiUser.email,
                 name: apiUser.name,
-                isVerified: true,
-                role: 'user' as const,
+                isVerified: apiUser.is_verified ?? true,
+                role: apiUser.role || 'user',
                 createdAt: new Date(),
                 location: apiUser.location || undefined,
+                latitude: apiUser.latitude,
+                longitude: apiUser.longitude
             };
         } catch (error) {
             console.error('Get current user error:', error);
@@ -530,8 +571,8 @@ class AuthService {
                         id: apiUser.id,
                         email: apiUser.email,
                         name: apiUser.name,
-                        isVerified: true,
-                        role: 'user' as const,
+                        isVerified: apiUser.is_verified ?? true,
+                        role: apiUser.role || 'user',
                         createdAt: new Date(),
                         lastLoginAt: new Date()
                     };
@@ -559,8 +600,8 @@ class AuthService {
                             id: apiUser.id,
                             email: apiUser.email,
                             name: apiUser.name,
-                            isVerified: true,
-                            role: 'user' as const,
+                            isVerified: apiUser.is_verified ?? true,
+                            role: apiUser.role || 'user',
                             createdAt: new Date(),
                             lastLoginAt: new Date()
                         };

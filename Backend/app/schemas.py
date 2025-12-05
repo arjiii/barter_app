@@ -22,7 +22,10 @@ class Item(BaseModel):
 	category: Optional[str] = None
 	condition: Optional[str] = None
 	images: Optional[list] = None
+	specs: Optional[dict] = None
 	location: Optional[str] = None
+	latitude: Optional[float] = None
+	longitude: Optional[float] = None
 	status: str
 	views: int = 0
 	created_at: Optional[datetime] = None
@@ -76,3 +79,46 @@ class Rating(BaseModel):
         from_attributes = True
 
 
+
+class UserBase(BaseModel):
+    name: str
+    email: str
+
+class UserCreate(UserBase):
+    password: str
+    role: Optional[str] = "user"
+
+class UserUpdate(BaseModel):
+    name: Optional[str] = None
+    email: Optional[str] = None
+    role: Optional[str] = None
+    is_verified: Optional[bool] = None
+
+class User(UserBase):
+    id: str
+    role: str
+    is_verified: bool
+    location: Optional[str] = None
+    created_at: Optional[datetime] = None
+
+    class Config:
+        from_attributes = True
+
+class SupportRequestBase(BaseModel):
+    type: str
+    subject: str
+    message: str
+
+class SupportRequestCreate(SupportRequestBase):
+    pass
+
+class SupportRequest(SupportRequestBase):
+    id: str
+    user_id: str
+    status: str
+    created_at: datetime
+    updated_at: datetime
+    user: Optional[User] = None
+
+    class Config:
+        from_attributes = True

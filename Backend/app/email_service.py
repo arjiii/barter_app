@@ -156,13 +156,6 @@ async def send_verification_email(email: str, token: str, user_name: str):
         print(f"Error sending verification email: {str(e)}")
         return False
 
-    try:
-        await fastmail.send(message)
-        return True
-    except Exception as e:
-        print(f"Error sending verification email: {str(e)}")
-        return False
-
 
 async def send_otp_email(email: str, otp: str, user_name: str):
     """Send OTP verification email"""

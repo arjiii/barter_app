@@ -17,7 +17,7 @@
 	let user: User | null = $state(null);
 	let isAuthenticated = $state(false);
 	let currentImageIndex = $state(0);
-let relatedItems: Item[] = $state([]);
+	let relatedItems = $state([] as Item[]);
 	let showTradeModal = $state(false);
 
 	// Get item ID from URL params
@@ -30,17 +30,20 @@ let relatedItems: Item[] = $state([]);
 			return;
 		}
 
-    try {
+		try {
 			isLoading = true;
 			error = null;
-        item = await itemService.getItemById(itemId);
-        // Load related items from same category (excluding this item)
-        if (item?.category) {
-            const sameCategory = await itemService.getItems({ status: 'available', category: item.category });
-            relatedItems = sameCategory.filter(i => i.id !== itemId).slice(0, 8);
-        } else {
-            relatedItems = [];
-        }
+			item = await itemService.getItemById(itemId);
+			// Load related items from same category (excluding this item)
+			if (item?.category) {
+				const sameCategory = await itemService.getItems({
+					status: 'available',
+					category: item.category
+				});
+				relatedItems = sameCategory.filter((i) => i.id !== itemId).slice(0, 8);
+			} else {
+				relatedItems = [];
+			}
 		} catch (err) {
 			error = 'Failed to load item details';
 			console.error('Error loading item:', err);
@@ -71,8 +74,8 @@ let relatedItems: Item[] = $state([]);
 		}
 	}
 
-	function handleTradeCreated(event: CustomEvent<Trade>) {
-		console.log('Trade created:', event.detail);
+	function handleTradeCreated(_event: CustomEvent<Trade>) {
+		// console.log('Trade created:', _event.detail);
 		// Reload item to update offers count
 		if (item) {
 			loadItem();
@@ -85,14 +88,16 @@ let relatedItems: Item[] = $state([]);
 			return;
 		}
 		if (!item || !user) return;
+		const targetItem = item!;
+		const currentUser = user!;
 
 		try {
 			// 1) Check for existing trade between the two users (any item)
-			const trades = await tradeService.getTrades({ userId: user.id });
+			const trades = await tradeService.getTrades({ userId: currentUser.id });
 			const existingTrade = trades.find((t) => {
 				return (
-					(t.fromUserId === user.id && t.toUserId === item.userId) ||
-					(t.toUserId === user.id && t.fromUserId === item.userId)
+					(t.fromUserId === currentUser.id && t.toUserId === targetItem.userId) ||
+					(t.toUserId === currentUser.id && t.fromUserId === targetItem.userId)
 				);
 			});
 
@@ -104,22 +109,22 @@ let relatedItems: Item[] = $state([]);
 			// 2) No existing conversation: create a simple chat trade + first message,
 			// then go straight to the messages page so both users can chat.
 			const quickMessage =
-				`Hi ${item.owner?.name || ''}, I'm interested in your "${item.title}".` .trim();
+				`Hi ${targetItem.owner?.name || ''}, I'm interested in your "${targetItem.title}".`.trim();
 
-			const createdTrade = await tradeService.createTrade(user.id, {
-				toUserId: item.userId,
+			const createdTrade = await tradeService.createTrade(currentUser.id, {
+				toUserId: targetItem.userId,
 				// Use the viewed item as both from/to to satisfy backend shape;
 				// this acts as a lightweight "chat context" for this item.
-				fromItemId: item.id,
-				toItemId: item.id,
+				fromItemId: targetItem.id,
+				toItemId: targetItem.id,
 				message: quickMessage
 			});
 
 			if (createdTrade) {
 				try {
-					await messageService.createMessage(user.id, {
+					await messageService.createMessage(currentUser.id, {
 						tradeId: createdTrade.id,
-						receiverId: item.userId,
+						receiverId: targetItem.userId,
 						content: quickMessage
 					});
 				} catch (msgErr) {
@@ -152,73 +157,101 @@ let relatedItems: Item[] = $state([]);
 
 <div class="min-h-screen bg-gray-50">
 	{#if isLoading}
-		<div class="flex items-center justify-center min-h-screen">
+		<div class="flex min-h-screen items-center justify-center">
 			<div class="text-center">
-				<div class="animate-spin rounded-full h-12 w-12 border-b-2 border-red-600 mx-auto mb-4"></div>
+				<div
+					class="mx-auto mb-4 h-12 w-12 animate-spin rounded-full border-b-2 border-red-600"
+				></div>
 				<p class="text-gray-600">Loading item details...</p>
 			</div>
 		</div>
 	{:else if error}
-		<div class="flex items-center justify-center min-h-screen">
+		<div class="flex min-h-screen items-center justify-center">
 			<div class="text-center">
-				<svg class="mx-auto h-16 w-16 text-gray-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-					<path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"></path>
+				<svg
+					class="mx-auto mb-4 h-16 w-16 text-gray-300"
+					fill="none"
+					stroke="currentColor"
+					viewBox="0 0 24 24"
+				>
+					<path
+						stroke-linecap="round"
+						stroke-linejoin="round"
+						stroke-width="1"
+						d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"
+					></path>
 				</svg>
-				<h3 class="text-lg font-semibold text-gray-900 mb-2">Something went wrong</h3>
-				<p class="text-gray-600 mb-4">{error}</p>
-				<button 
-					onclick={() => goto('/discovery')}
-					class="bg-red-600 text-white px-6 py-2 rounded-lg hover:bg-red-700 transition-colors font-medium"
+				<h3 class="mb-2 text-lg font-semibold text-gray-900">Something went wrong</h3>
+				<p class="mb-4 text-gray-600">{error}</p>
+				<a
+					href="/discovery"
+					class="rounded-lg bg-red-600 px-6 py-2 font-medium text-white transition-colors hover:bg-red-700"
 				>
 					Back to Discovery
-				</button>
+				</a>
 			</div>
 		</div>
 	{:else if item}
-		<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+		<div class="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
 			<!-- Back Button -->
-			<button 
-				onclick={() => goto('/discovery')}
-				class="flex items-center text-gray-600 hover:text-gray-900 mb-6 transition-colors"
+			<a
+				href="/discovery"
+				class="mb-6 flex items-center text-gray-600 transition-colors hover:text-gray-900"
 			>
-				<svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-					<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+				<svg class="mr-2 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+					<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"
+					></path>
 				</svg>
 				Back to Discovery
-			</button>
+			</a>
 
-			<div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+			<div class="grid grid-cols-1 gap-8 lg:grid-cols-2">
 				<!-- Image Gallery -->
 				<div class="space-y-4">
 					<!-- Main Image -->
-					<div class="relative bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
-						<img 
-							src={item.images[currentImageIndex] || 'https://via.placeholder.com/600x400?text=No+Image'} 
+					<div
+						class="relative overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm"
+					>
+						<img
+							src={item.images[currentImageIndex] ||
+								'https://via.placeholder.com/600x400?text=No+Image'}
 							alt={item.title}
-							class="w-full h-96 object-cover"
+							class="h-96 w-full object-cover"
 						/>
-						
+
 						<!-- Image Navigation -->
 						{#if item.images.length > 1}
-							<button 
+							<button
 								onclick={prevImage}
-								class="absolute left-4 top-1/2 transform -translate-y-1/2 bg-black bg-opacity-50 text-white p-2 rounded-full hover:bg-opacity-70 transition-all"
+								class="absolute left-4 top-1/2 -translate-y-1/2 transform rounded-full bg-black bg-opacity-50 p-2 text-white transition-all hover:bg-opacity-70"
 							>
-								<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+								<svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+									<path
+										stroke-linecap="round"
+										stroke-linejoin="round"
+										stroke-width="2"
+										d="M15 19l-7-7 7-7"
+									></path>
 								</svg>
 							</button>
-							<button 
+							<button
 								onclick={nextImage}
-								class="absolute right-4 top-1/2 transform -translate-y-1/2 bg-black bg-opacity-50 text-white p-2 rounded-full hover:bg-opacity-70 transition-all"
+								class="absolute right-4 top-1/2 -translate-y-1/2 transform rounded-full bg-black bg-opacity-50 p-2 text-white transition-all hover:bg-opacity-70"
 							>
-								<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+								<svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+									<path
+										stroke-linecap="round"
+										stroke-linejoin="round"
+										stroke-width="2"
+										d="M9 5l7 7-7 7"
+									></path>
 								</svg>
 							</button>
-							
+
 							<!-- Image Counter -->
-							<div class="absolute bottom-4 right-4 bg-black bg-opacity-50 text-white px-3 py-1 rounded-full text-sm">
+							<div
+								class="absolute bottom-4 right-4 rounded-full bg-black bg-opacity-50 px-3 py-1 text-sm text-white"
+							>
 								{currentImageIndex + 1} / {item.images.length}
 							</div>
 						{/if}
@@ -227,17 +260,13 @@ let relatedItems: Item[] = $state([]);
 					<!-- Thumbnail Gallery -->
 					{#if item.images.length > 1}
 						<div class="grid grid-cols-4 gap-2">
-							{#each item.images as image, index}
-								<button 
-									onclick={() => currentImageIndex = index}
-									class="relative bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-shadow
+							{#each item.images as image, index (index)}
+								<button
+									onclick={() => (currentImageIndex = index)}
+									class="relative overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm transition-shadow hover:shadow-md
 										{currentImageIndex === index ? 'ring-2 ring-red-500' : ''}"
 								>
-									<img 
-										src={image} 
-										alt="Thumbnail {index + 1}"
-										class="w-full h-20 object-cover"
-									/>
+									<img src={image} alt="Thumbnail {index + 1}" class="h-20 w-full object-cover" />
 								</button>
 							{/each}
 						</div>
@@ -247,15 +276,15 @@ let relatedItems: Item[] = $state([]);
 				<!-- Item Details -->
 				<div class="space-y-6">
 					<!-- Header -->
-					<div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
-						<div class="flex items-start justify-between mb-4">
+					<div class="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+						<div class="mb-4 flex items-start justify-between">
 							<div class="flex-1">
-								<h1 class="text-3xl font-bold text-gray-900 mb-2">{item.title}</h1>
+								<h1 class="mb-2 text-3xl font-bold text-gray-900">{item.title}</h1>
 								<div class="flex items-center space-x-4 text-sm text-gray-500">
-									<span class="bg-red-100 text-red-800 px-3 py-1 rounded-full font-medium">
+									<span class="rounded-full bg-red-100 px-3 py-1 font-medium text-red-800">
 										{item.condition}
 									</span>
-									<span class="bg-gray-100 text-gray-800 px-3 py-1 rounded-full font-medium">
+									<span class="rounded-full bg-gray-100 px-3 py-1 font-medium text-gray-800">
 										{item.category}
 									</span>
 								</div>
@@ -268,55 +297,74 @@ let relatedItems: Item[] = $state([]);
 
 						<!-- Description -->
 						<div class="mb-6">
-							<h3 class="text-lg font-semibold text-gray-900 mb-3">Description</h3>
-							<p class="text-gray-700 leading-relaxed">{item.description}</p>
+							<h3 class="mb-3 text-lg font-semibold text-gray-900">Description</h3>
+							<p class="leading-relaxed text-gray-700">{item.description}</p>
 						</div>
 
-					<!-- More Info -->
-					<div class="mb-6">
-						<h3 class="text-lg font-semibold text-gray-900 mb-3">More information</h3>
-						<div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-							<div class="bg-gray-50 rounded-xl p-4 border border-gray-100">
-								<div class="text-xs text-gray-500">Status</div>
-								<div class="font-medium text-gray-900 capitalize">{item.status}</div>
-							</div>
-							<div class="bg-gray-50 rounded-xl p-4 border border-gray-100">
-								<div class="text-xs text-gray-500">Condition</div>
-								<div class="font-medium text-gray-900">{item.condition}</div>
-							</div>
-							<div class="bg-gray-50 rounded-xl p-4 border border-gray-100">
-								<div class="text-xs text-gray-500">Category</div>
-								<div class="font-medium text-gray-900">{item.category}</div>
-							</div>
-							{#if item.location}
-							<div class="bg-gray-50 rounded-xl p-4 border border-gray-100">
-								<div class="text-xs text-gray-500">Location</div>
-								<div class="font-medium text-gray-900 flex items-center">
-									<svg class="w-4 h-4 mr-1 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-										<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
-										<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
-									</svg>
-									{item.location}
+						<!-- More Info -->
+						<div class="mb-6">
+							<h3 class="mb-3 text-lg font-semibold text-gray-900">More information</h3>
+							<div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+								<div class="rounded-xl border border-gray-100 bg-gray-50 p-4">
+									<div class="text-xs text-gray-500">Status</div>
+									<div class="font-medium capitalize text-gray-900">{item.status}</div>
+								</div>
+								<div class="rounded-xl border border-gray-100 bg-gray-50 p-4">
+									<div class="text-xs text-gray-500">Condition</div>
+									<div class="font-medium text-gray-900">{item.condition}</div>
+								</div>
+								<div class="rounded-xl border border-gray-100 bg-gray-50 p-4">
+									<div class="text-xs text-gray-500">Category</div>
+									<div class="font-medium text-gray-900">{item.category}</div>
+								</div>
+								{#if item.location}
+									<div class="rounded-xl border border-gray-100 bg-gray-50 p-4">
+										<div class="text-xs text-gray-500">Location</div>
+										<div class="flex items-center font-medium text-gray-900">
+											<svg
+												class="mr-1 h-4 w-4 text-gray-500"
+												fill="none"
+												stroke="currentColor"
+												viewBox="0 0 24 24"
+											>
+												<path
+													stroke-linecap="round"
+													stroke-linejoin="round"
+													stroke-width="2"
+													d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
+												></path>
+												<path
+													stroke-linecap="round"
+													stroke-linejoin="round"
+													stroke-width="2"
+													d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
+												></path>
+											</svg>
+											{item.location}
+										</div>
+									</div>
+								{/if}
+								<div class="rounded-xl border border-gray-100 bg-gray-50 p-4">
+									<div class="text-xs text-gray-500">Item ID</div>
+									<div class="break-all font-mono text-sm text-gray-900">{item.id}</div>
+								</div>
+								<div class="rounded-xl border border-gray-100 bg-gray-50 p-4">
+									<div class="text-xs text-gray-500">Created</div>
+									<div class="font-medium text-gray-900">
+										{new Date(item.createdAt).toLocaleString()}
+									</div>
+								</div>
+								<div class="rounded-xl border border-gray-100 bg-gray-50 p-4">
+									<div class="text-xs text-gray-500">Updated</div>
+									<div class="font-medium text-gray-900">
+										{new Date(item.updatedAt).toLocaleString()}
+									</div>
 								</div>
 							</div>
-							{/if}
-							<div class="bg-gray-50 rounded-xl p-4 border border-gray-100">
-								<div class="text-xs text-gray-500">Item ID</div>
-								<div class="font-mono text-sm text-gray-900 break-all">{item.id}</div>
-							</div>
-							<div class="bg-gray-50 rounded-xl p-4 border border-gray-100">
-								<div class="text-xs text-gray-500">Created</div>
-								<div class="font-medium text-gray-900">{new Date(item.createdAt).toLocaleString()}</div>
-							</div>
-							<div class="bg-gray-50 rounded-xl p-4 border border-gray-100">
-								<div class="text-xs text-gray-500">Updated</div>
-								<div class="font-medium text-gray-900">{new Date(item.updatedAt).toLocaleString()}</div>
-							</div>
 						</div>
-					</div>
 
 						<!-- Stats -->
-						<div class="grid grid-cols-2 gap-4 py-4 border-t border-gray-200">
+						<div class="grid grid-cols-2 gap-4 border-t border-gray-200 py-4">
 							<div class="text-center">
 								<div class="text-2xl font-bold text-gray-900">{item.views}</div>
 								<div class="text-sm text-gray-500">Views</div>
@@ -329,21 +377,33 @@ let relatedItems: Item[] = $state([]);
 					</div>
 
 					<!-- Owner Info -->
-					<div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
-						<h3 class="text-lg font-semibold text-gray-900 mb-4">Posted by</h3>
-						<div 
-							class="flex items-center space-x-4 cursor-pointer hover:bg-gray-50 p-2 rounded-lg transition-colors"
-							onclick={() => item?.owner?.id && goto(`/user/${item.owner.id}`)}
+					<div class="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+						<h3 class="mb-4 text-lg font-semibold text-gray-900">Posted by</h3>
+						<div
+							class="flex cursor-pointer items-center space-x-4 rounded-lg p-2 transition-colors hover:bg-gray-50"
+							onclick={() => {
+								if (item?.owner?.id) goto(`/user/${item.owner.id}`);
+							}}
+							onkeydown={(e) => {
+								if ((e.key === 'Enter' || e.key === ' ') && item?.owner?.id) {
+									e.preventDefault();
+									goto(`/user/${item.owner.id}`);
+								}
+							}}
 							role="button"
 							tabindex="0"
 						>
-							<div class="w-12 h-12 bg-gradient-to-br from-red-500 to-red-600 rounded-full flex items-center justify-center">
-								<span class="text-white font-semibold">
+							<div
+								class="flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-red-500 to-red-600"
+							>
+								<span class="font-semibold text-white">
 									{item.owner?.name?.charAt(0) || 'U'}
 								</span>
 							</div>
 							<div class="flex-1">
-								<div class="font-semibold text-gray-900 hover:text-red-600 transition-colors">{item.owner?.name || 'User'}</div>
+								<div class="font-semibold text-gray-900 transition-colors hover:text-red-600">
+									{item.owner?.name || 'User'}
+								</div>
 								<div class="text-sm text-gray-500">
 									{#if item.owner?.rating}
 										⭐ {item.owner.rating.toFixed(1)} rating
@@ -352,8 +412,18 @@ let relatedItems: Item[] = $state([]);
 									{/if}
 								</div>
 							</div>
-							<svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+							<svg
+								class="h-5 w-5 text-gray-400"
+								fill="none"
+								stroke="currentColor"
+								viewBox="0 0 24 24"
+							>
+								<path
+									stroke-linecap="round"
+									stroke-linejoin="round"
+									stroke-width="2"
+									d="M9 5l7 7-7 7"
+								></path>
 							</svg>
 						</div>
 					</div>
@@ -362,58 +432,75 @@ let relatedItems: Item[] = $state([]);
 					<div class="space-y-3">
 						{#if isAuthenticated}
 							{#if item.userId !== user?.id}
-							<button 
-								onclick={handleMakeOffer}
-								class="w-full bg-red-600 text-white py-4 px-6 rounded-xl hover:bg-red-700 transition-colors font-semibold text-lg shadow-sm hover:shadow-md"
-							>
-								Make an Offer
-							</button>
-							<button 
-								onclick={handleContactOwner}
-								class="w-full bg-gray-100 text-gray-700 py-3 px-6 rounded-xl hover:bg-gray-200 transition-colors font-medium"
-							>
-								Contact Owner
-							</button>
+								<button
+									onclick={handleMakeOffer}
+									class="w-full rounded-xl bg-red-600 px-6 py-4 text-lg font-semibold text-white shadow-sm transition-colors hover:bg-red-700 hover:shadow-md"
+								>
+									Make an Offer
+								</button>
+								<button
+									onclick={handleContactOwner}
+									class="w-full rounded-xl bg-gray-100 px-6 py-3 font-medium text-gray-700 transition-colors hover:bg-gray-200"
+								>
+									Contact Owner
+								</button>
 							{:else}
-								<div class="bg-blue-50 border border-blue-200 rounded-xl p-4 text-center">
-									<p class="text-blue-800 font-medium">This is your item</p>
-									<p class="text-blue-600 text-sm mt-1">You cannot make an offer on your own item</p>
+								<div class="rounded-xl border border-blue-200 bg-blue-50 p-4 text-center">
+									<p class="font-medium text-blue-800">This is your item</p>
+									<p class="mt-1 text-sm text-blue-600">
+										You cannot make an offer on your own item
+									</p>
 								</div>
 							{/if}
 						{:else}
-							<button 
-								onclick={() => goto('/sign-in-up')}
-								class="w-full bg-red-600 text-white py-4 px-6 rounded-xl hover:bg-red-700 transition-colors font-semibold text-lg shadow-sm hover:shadow-md"
+							<!-- eslint-disable-next-line -->
+							<a
+								href="/sign-in-up"
+								class="block w-full rounded-xl bg-red-600 px-6 py-4 text-center text-lg font-semibold text-white shadow-sm transition-colors hover:bg-red-700 hover:shadow-md"
 							>
 								Sign in to Make Offer
-							</button>
+							</a>
 						{/if}
 					</div>
 				</div>
 			</div>
 
-		<!-- Related Items -->
-		{#if relatedItems.length}
-			<div class="mt-10">
-				<h3 class="text-xl font-semibold text-gray-900 mb-4">Similar items</h3>
-				<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-					{#each relatedItems as ri}
-						<button onclick={() => goto(`/item/${ri.id}`)} class="text-left bg-white rounded-xl shadow-sm border border-gray-200 hover:shadow-md transition overflow-hidden">
-							<img src={ri.images[0] || 'https://via.placeholder.com/400x300?text=No+Image'} alt={ri.title} class="w-full h-40 object-cover" />
-							<div class="p-4">
-								<div class="font-medium text-gray-900 line-clamp-1 mb-1">{ri.title}</div>
-								<div class="text-sm text-gray-600 line-clamp-2">{ri.description}</div>
-							</div>
-						</button>
-					{/each}
+			<!-- Related Items -->
+			{#if relatedItems.length}
+				<div class="mt-10">
+					<h3 class="mb-4 text-xl font-semibold text-gray-900">Similar items</h3>
+					<div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+						{#each relatedItems as ri (ri.id)}
+							<!-- eslint-disable-next-line -->
+							<a
+								href="/item/{ri.id}"
+								class="block overflow-hidden rounded-xl border border-gray-200 bg-white text-left shadow-sm transition hover:shadow-md"
+							>
+								<img
+									src={ri.images[0] || 'https://via.placeholder.com/400x300?text=No+Image'}
+									alt={ri.title}
+									class="h-40 w-full object-cover"
+								/>
+								<div class="p-4">
+									<div class="mb-1 line-clamp-1 font-medium text-gray-900">{ri.title}</div>
+									<div class="line-clamp-2 text-sm text-gray-600">{ri.description}</div>
+								</div>
+							</a>
+						{/each}
+					</div>
 				</div>
-			</div>
-		{/if}
+			{/if}
 		</div>
 	{/if}
 </div>
 
 <!-- Trade Offer Modal -->
 {#if item}
-	<TradeOfferModal bind:isOpen={showTradeModal} bind:targetItem={item} on:tradeCreated={handleTradeCreated} />
+	{#key item?.id}
+		<TradeOfferModal
+			bind:isOpen={showTradeModal}
+			targetItem={item}
+			on:tradeCreated={handleTradeCreated}
+		/>
+	{/key}
 {/if}
