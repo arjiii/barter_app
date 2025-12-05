@@ -161,7 +161,7 @@ class AuthService {
     async signIn(credentials: LoginCredentials): Promise<AuthResponse> {
         try {
             // Backend login (OAuth2 password form)
-            const res = await fetch(`${API_BASE_URL}/auth/login`, {
+            const res = await fetch(`${API_BASE_URL}/supabase-auth/login`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
                 body: new URLSearchParams({ username: credentials.email, password: credentials.password })
@@ -235,7 +235,7 @@ class AuthService {
         try {
             const token = this.getToken();
             if (!token || this.isUuidToken(token)) return null; // UUID tokens are for offline mode only
-            const res = await fetch(`${API_BASE_URL}/auth/profile`, {
+            const res = await fetch(`${API_BASE_URL}/supabase-auth/profile`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
                 body: JSON.stringify({
@@ -270,7 +270,7 @@ class AuthService {
         try {
             const token = this.getToken();
             if (!token || this.isUuidToken(token)) return false; // UUID tokens are for offline mode only
-            const res = await fetch(`${API_BASE_URL}/auth/change-password`, {
+            const res = await fetch(`${API_BASE_URL}/supabase-auth/change-password`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
                 body: JSON.stringify({ old_password: oldPassword, new_password: newPassword })
@@ -287,7 +287,7 @@ class AuthService {
      */
     async requestPasswordReset(email: string): Promise<{ success: boolean; message: string }> {
         try {
-            const res = await fetch(`${API_BASE_URL}/auth/forgot-password`, {
+            const res = await fetch(`${API_BASE_URL}/supabase-auth/forgot-password`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ email })
@@ -305,7 +305,7 @@ class AuthService {
      */
     async resetPassword(token: string, newPassword: string): Promise<{ success: boolean; message: string }> {
         try {
-            const res = await fetch(`${API_BASE_URL}/auth/reset-password`, {
+            const res = await fetch(`${API_BASE_URL}/supabase-auth/reset-password`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ token, new_password: newPassword })
@@ -326,7 +326,7 @@ class AuthService {
      */
     async verifyEmail(email: string, otp: string): Promise<{ success: boolean; message: string; token?: string; user?: User }> {
         try {
-            const res = await fetch(`${API_BASE_URL}/auth/verify-email`, {
+            const res = await fetch(`${API_BASE_URL}/supabase-auth/confirm`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ email, otp })
@@ -364,7 +364,7 @@ class AuthService {
      */
     async resendVerificationEmail(email: string): Promise<{ success: boolean; message: string }> {
         try {
-            const res = await fetch(`${API_BASE_URL}/auth/resend-verification`, {
+            const res = await fetch(`${API_BASE_URL}/supabase-auth/signup`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ email })
@@ -381,7 +381,7 @@ class AuthService {
      */
     async signUp(credentials: SignUpCredentials): Promise<AuthResponse> {
         try {
-            const res = await fetch(`${API_BASE_URL}/auth/signup`, {
+            const res = await fetch(`${API_BASE_URL}/supabase-auth/signup`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -512,7 +512,7 @@ class AuthService {
             }
 
             // Token is a JWT, try backend first
-            const res = await fetch(`${API_BASE_URL}/auth/me`, { headers: { Authorization: `Bearer ${token}` } });
+            const res = await fetch(`${API_BASE_URL}/supabase-auth/me`, { headers: { Authorization: `Bearer ${token}` } });
             if (!res.ok) {
                 // JWT token is invalid/expired, clear it
                 localStorage.removeItem('bayanihan_token');
@@ -558,7 +558,7 @@ class AuthService {
 
             // Try to create user in backend first
             try {
-                const res = await fetch(`${API_BASE_URL}/auth/signup`, {
+                const res = await fetch(`${API_BASE_URL}/supabase-auth/signup`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(testUser)
@@ -587,7 +587,7 @@ class AuthService {
                     };
                 } else {
                     // User might already exist, try to login
-                    const loginRes = await fetch(`${API_BASE_URL}/auth/login`, {
+                    const loginRes = await fetch(`${API_BASE_URL}/supabase-auth/login`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
                         body: new URLSearchParams({ username: testUser.email, password: testUser.password })

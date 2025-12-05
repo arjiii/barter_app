@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 from .config import settings
 from .database import Base, engine, get_db
 from . import models
-from .routers import categories, items, trades, messages, auth, realtime, admin, supabase_auth, support, reports
+from .routers import categories, items, trades, messages, realtime, admin, supabase_auth, support, reports
 
 
 app = FastAPI(title="Bayanihan Exchange API")
@@ -94,8 +94,7 @@ app.include_router(categories.router)
 app.include_router(items.router)
 app.include_router(trades.router)
 app.include_router(messages.router)
-app.include_router(auth.router)
-app.include_router(supabase_auth.router)  # New Supabase auth
+app.include_router(supabase_auth.router)  # Supabase auth only
 app.include_router(realtime.router)
 app.include_router(admin.router)
 app.include_router(support.router)

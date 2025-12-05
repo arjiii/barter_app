@@ -4,7 +4,7 @@ import type { User } from '../types/auth';
 class UserService {
   async getUserById(id: string): Promise<User | null> {
     try {
-      const res = await fetch(`${API_BASE_URL}/auth/user/${id}`);
+      const res = await fetch(`${API_BASE_URL}/supabase-auth/user/${id}`);
       if (!res.ok) return null;
       const data = await res.json();
       const user: User = {
