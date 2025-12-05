@@ -35,6 +35,7 @@ export interface SignUpCredentials {
 	location?: string;
 	latitude?: number;
 	longitude?: number;
+	verificationMethod?: 'email' | 'admin';
 }
 
 export interface AuthState {
