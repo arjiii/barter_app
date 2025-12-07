@@ -160,11 +160,11 @@ class AuthService {
      */
     async signIn(credentials: LoginCredentials): Promise<AuthResponse> {
         try {
-            // Backend login (OAuth2 password form)
+            // Backend login (Supabase Auth)
             const res = await fetch(`${API_BASE_URL}/supabase-auth/login`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                body: new URLSearchParams({ username: credentials.email, password: credentials.password })
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email: credentials.email, password: credentials.password })
             });
             if (!res.ok) {
                 // Fallback to local storage auth if backend rejects
@@ -589,8 +589,8 @@ class AuthService {
                     // User might already exist, try to login
                     const loginRes = await fetch(`${API_BASE_URL}/supabase-auth/login`, {
                         method: 'POST',
-                        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                        body: new URLSearchParams({ username: testUser.email, password: testUser.password })
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ email: testUser.email, password: testUser.password })
                     });
 
                     if (loginRes.ok) {

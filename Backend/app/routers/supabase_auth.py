@@ -202,7 +202,7 @@ async def confirm_email(payload: dict, db: Session = Depends(get_db)):
 @router.post("/login")
 async def supabase_login(payload: dict, db: Session = Depends(get_db)):
 	"""
-	Login with Supabase authentication
+	Login with Supabase authentication (with legacy fallback)
 	"""
 	try:
 		email = payload.get("email", "").strip().lower()
@@ -214,24 +214,21 @@ async def supabase_login(payload: dict, db: Session = Depends(get_db)):
 				detail="Email and password are required"
 			)
 		
-		# Authenticate with Supabase
-		supabase = get_supabase_client()
-		auth_response = supabase.auth.sign_in_with_password({
-			"email": email,
-			"password": password
-		})
+		# 1. Try Supabase Authentication first
+		supabase_user = None
+		try:
+			supabase = get_supabase_client()
+			auth_response = supabase.auth.sign_in_with_password({
+				"email": email,
+				"password": password
+			})
+			if auth_response.user:
+				supabase_user = auth_response.user
+		except Exception as e:
+			# Supabase login failed, continue to legacy check
+			pass
 		
-		if not auth_response.user:
-			raise HTTPException(status_code=401, detail="Invalid credentials")
-		
-		# Check if email verified
-		if not auth_response.user.email_confirmed_at:
-			raise HTTPException(
-				status_code=400,
-				detail="Please verify your email before logging in"
-			)
-		
-		# Get user from database
+		# 2. Check local database
 		user = db.query(models.User).filter(models.User.email == email).first()
 		
 		if not user:
@@ -239,6 +236,22 @@ async def supabase_login(payload: dict, db: Session = Depends(get_db)):
 				status_code=404,
 				detail="Account not found. Please complete signup."
 			)
+
+		# 3. Verify credentials
+		if supabase_user:
+			# Supabase auth succeeded
+			if not supabase_user.email_confirmed_at:
+				raise HTTPException(
+					status_code=400,
+					detail="Please verify your email before logging in"
+				)
+		else:
+			# Supabase failed, try legacy password hash
+			from ..security import verify_password
+			if not user.password_hash or not verify_password(password, user.password_hash):
+				raise HTTPException(status_code=401, detail="Invalid credentials")
+			
+			# Legacy user authenticated successfully
 		
 		token = create_access_token(user.id)
 		
@@ -248,7 +261,8 @@ async def supabase_login(payload: dict, db: Session = Depends(get_db)):
 				"id": user.id,
 				"name": user.name,
 				"email": user.email,
-				"location": user.location
+				"location": user.location,
+				"role": user.role
 			},
 			"token": token
 		}
