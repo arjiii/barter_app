@@ -29,25 +29,25 @@ const initialState: ConversationsState = {
 function dedupeConversations(conversations: Conversation[], userId: string | null) {
 	const byUser = new Map<string, Conversation>();
 	for (const convo of conversations) {
-		const key = convo.otherUser.id;
+		const key = convo.other_user.id;
 		const existing = byUser.get(key);
 		if (!existing) {
 			byUser.set(key, convo);
 			continue;
 		}
-		const existingTime = new Date(existing.lastMessageTime || 0).getTime();
-		const currentTime = new Date(convo.lastMessageTime || 0).getTime();
+		const existingTime = new Date(existing.last_message_time || 0).getTime();
+		const currentTime = new Date(convo.last_message_time || 0).getTime();
 		if (currentTime > existingTime) {
 			byUser.set(key, convo);
 		}
 	}
-	return Array.from(byUser.values()).filter((c) => c.otherUser?.id && c.otherUser.id !== userId);
+	return Array.from(byUser.values()).filter((c) => c.other_user?.id && c.other_user.id !== userId);
 }
 
 function sortConversations(conversations: Conversation[]) {
 	return [...conversations].sort((a, b) => {
-		const aTime = new Date(a.lastMessageTime || 0).getTime();
-		const bTime = new Date(b.lastMessageTime || 0).getTime();
+		const aTime = new Date(a.last_message_time || 0).getTime();
+		const bTime = new Date(b.last_message_time || 0).getTime();
 		return bTime - aTime;
 	});
 }
@@ -88,25 +88,25 @@ function createConversationsStore() {
 		try {
 			const trade = await tradeService.getTradeById(tradeId);
 			if (!trade) return null;
-			const otherUserId = trade.fromUserId === state.userId ? trade.toUserId : trade.fromUserId;
+			const otherUserId = trade.from_user_id === state.userId ? trade.to_user_id : trade.from_user_id;
 			const otherUser = await userService.getUserById(otherUserId);
 			if (!otherUser) return null;
 			const synthetic: Conversation = {
-				tradeId: trade.id,
-				otherUser: {
+				trade_id: trade.id,
+				other_user: {
 					id: otherUser.id,
 					name: otherUser.name || 'User',
 					avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(otherUser.name || 'User')}&background=ef4444&color=fff`,
 					online: false
 				},
-				tradeItem: { title: trade.message || 'Direct chat' },
-				lastMessage: '',
-				lastMessageTime: trade.updatedAt ? trade.updatedAt.toISOString?.() ?? '' : '',
-				unreadCount: 0
+				trade_item: { title: trade.message || 'Direct chat' },
+				last_message: '',
+				last_message_time: trade.updated_at ? trade.updated_at : '',
+				unread_count: 0
 			};
 			update((current) => ({
 				...current,
-				items: sortConversations([synthetic, ...current.items.filter((c) => c.tradeId !== synthetic.tradeId)])
+				items: sortConversations([synthetic, ...current.items.filter((c) => c.trade_id !== synthetic.trade_id)])
 			}));
 			return synthetic;
 		} catch (error) {
@@ -120,8 +120,8 @@ function createConversationsStore() {
 		if (!query) return $state.items;
 		return $state.items.filter(
 			(conv) =>
-				conv.otherUser.name.toLowerCase().includes(query) ||
-				(conv.tradeItem?.title || '').toLowerCase().includes(query)
+				conv.other_user.name.toLowerCase().includes(query) ||
+				(conv.trade_item?.title || '').toLowerCase().includes(query)
 		);
 	});
 
@@ -146,7 +146,7 @@ function createConversationsStore() {
 				...current,
 				selected: conversation,
 				items: current.items.map((c) =>
-					c.tradeId === conversation.tradeId ? { ...c, unreadCount: 0 } : c
+					c.trade_id === conversation.trade_id ? { ...c, unread_count: 0 } : c
 				)
 			}));
 		},
@@ -158,17 +158,17 @@ function createConversationsStore() {
 		},
 		async ensureConversation(tradeId: string) {
 			const state = get({ subscribe });
-			const existing = state.items.find((c) => c.tradeId === tradeId);
+			const existing = state.items.find((c) => c.trade_id === tradeId);
 			if (existing) return existing;
 			return hydrateConversationFromTrade(tradeId);
 		},
 		updateFromSocket(conversation: Conversation) {
 			update((current) => {
-				const existing = current.items.find((c) => c.tradeId === conversation.tradeId);
+				const existing = current.items.find((c) => c.trade_id === conversation.trade_id);
 				let items = current.items;
 				if (existing) {
 					items = current.items.map((c) =>
-						c.tradeId === conversation.tradeId ? { ...existing, ...conversation } : c
+						c.trade_id === conversation.trade_id ? { ...existing, ...conversation } : c
 					);
 				} else {
 					items = [conversation, ...current.items];

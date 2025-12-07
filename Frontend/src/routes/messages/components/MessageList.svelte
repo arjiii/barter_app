@@ -5,7 +5,7 @@
 	export let messages: Message[] = [];
 	export let currentUserId: string | null = null;
 	export let typingText = '';
-	export let seenTimestamp: Date | null = null;
+	export let seenTimestamp: string | null = null;
 
 	const dispatch = createEventDispatcher<{ bottom: boolean }>();
 
@@ -39,29 +39,32 @@
 	});
 
 	$: lastMessageFromSelf = messages
-		.filter((message) => message.senderId === currentUserId)
+		.filter((message) => message.sender_id === currentUserId)
 		.slice(-1)[0];
 </script>
 
 <div
-	class="flex-1 space-y-4 overflow-y-auto px-6 py-6"
+	class="flex-1 space-y-4 overflow-y-auto px-4 py-4 lg:px-6 lg:py-6"
 	bind:this={listRef}
 	on:scroll={handleScroll}
 >
 	{#each messages as message (message.id)}
-		<div class={'flex ' + (message.senderId === currentUserId ? 'justify-end' : 'justify-start')}>
+		<div class={'flex ' + (message.sender_id === currentUserId ? 'justify-end' : 'justify-start')}>
 			<div
-				class={`max-w-[80%] rounded-2xl px-4 py-3 text-sm shadow-lg ${
-					message.senderId === currentUserId
-						? 'rounded-tr-sm bg-gradient-to-br from-[#ff6d3f] to-[#ff855a] text-white'
-						: 'rounded-tl-sm border border-[#f5e1ce] bg-[#fff6ee] text-[#3a2315] shadow-[0_4px_12px_rgba(0,0,0,0.08)]'
+				class={`max-w-[85%] rounded-2xl px-4 py-2.5 text-sm shadow-sm lg:max-w-[75%] ${
+					message.sender_id === currentUserId
+						? 'rounded-br-sm bg-red-600 text-white'
+						: 'rounded-bl-sm bg-gray-100 text-gray-900'
 				}`}
 			>
-				<p class="leading-relaxed">{message.content}</p>
+				<p class="whitespace-pre-wrap leading-relaxed">{message.content}</p>
 				<p
-					class={`mt-1 text-[11px] ${message.senderId === currentUserId ? 'text-white/60' : 'text-[#a37758]'}`}
+					class={`mt-1 text-[10px] ${message.sender_id === currentUserId ? 'text-red-100' : 'text-gray-500'}`}
 				>
-					{new Date(message.createdAt).toLocaleString()}
+					{new Date(message.created_at).toLocaleTimeString([], {
+						hour: '2-digit',
+						minute: '2-digit'
+					})}
 				</p>
 			</div>
 		</div>
@@ -69,15 +72,24 @@
 
 	{#if typingText}
 		<div class="flex justify-start">
-			<div class="rounded-2xl bg-white/70 px-4 py-2 text-sm text-[#6a4a37] shadow">
-				{typingText}
+			<div class="rounded-2xl bg-gray-100 px-4 py-2 text-sm text-gray-500">
+				<div class="flex items-center gap-1">
+					<span class="h-1.5 w-1.5 animate-bounce rounded-full bg-gray-400"></span>
+					<span class="h-1.5 w-1.5 animate-bounce rounded-full bg-gray-400 delay-75"></span>
+					<span class="h-1.5 w-1.5 animate-bounce rounded-full bg-gray-400 delay-150"></span>
+				</div>
 			</div>
 		</div>
 	{/if}
 
 	{#if lastMessageFromSelf && seenTimestamp}
-		<p class="pr-4 text-right text-xs text-[#7d5b45]">
-			Seen • {seenTimestamp.toLocaleTimeString()}
-		</p>
+		<div class="flex justify-end pr-1">
+			<p class="text-[10px] font-medium text-gray-400">
+				Seen {new Date(seenTimestamp).toLocaleTimeString([], {
+					hour: '2-digit',
+					minute: '2-digit'
+				})}
+			</p>
+		</div>
 	{/if}
 </div>

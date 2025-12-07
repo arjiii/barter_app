@@ -11,6 +11,8 @@ export interface User {
 	location?: string;
 	latitude?: number;
 	longitude?: number;
+	rating?: number;
+	avatar?: string;
 }
 
 export interface AuthResponse {

@@ -1,57 +1,55 @@
 export interface Trade {
 	id: string;
-	fromUserId: string;
-	toUserId: string;
-	fromItemId: string;
-	toItemId: string;
+	from_user_id: string;
+	to_user_id: string;
+	from_item_id: string;
+	to_item_id: string;
 	message: string;
 	status: 'pending' | 'accepted' | 'rejected' | 'active' | 'completed' | 'cancelled';
-	expiresAt?: Date;
-	meetingLocation?: string;
-	meetingTime?: Date;
-	createdAt: Date;
-	updatedAt: Date;
+	expires_at?: string;
+	meeting_location?: string;
+	meeting_time?: string;
+	created_at: string;
+	updated_at: string;
 	// Computed fields
-	fromUser?: {
+	from_user?: {
 		id: string;
 		name: string;
 		avatar?: string;
 		rating?: number;
 	};
-	toUser?: {
+	to_user?: {
 		id: string;
 		name: string;
 		avatar?: string;
 		rating?: number;
 	};
-	fromItem?: {
+	from_item?: {
 		id: string;
 		title: string;
 		image?: string;
 	};
-	toItem?: {
+	to_item?: {
 		id: string;
 		title: string;
 		image?: string;
 	};
-	createdAgo?: string;
-	expiresIn?: string;
 }
 
 export interface CreateTradeData {
-	toUserId: string;
-	fromItemId: string;
-	toItemId: string;
+	to_user_id: string;
+	from_item_id: string;
+	to_item_id: string;
 	message: string;
-	expiresAt?: Date;
-	meetingLocation?: string;
-	meetingTime?: Date;
+	expires_at?: string;
+	meeting_location?: string;
+	meeting_time?: string;
 }
 
 export interface UpdateTradeData {
 	status?: Trade['status'];
-	meetingLocation?: string;
-	meetingTime?: Date;
+	meeting_location?: string;
+	meeting_time?: string;
 	message?: string;
 }
 

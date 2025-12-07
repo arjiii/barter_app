@@ -1,54 +1,22 @@
-import { v4 as uuidv4 } from 'uuid';
 import type { Item, Category, CreateItemData, UpdateItemData, ItemFilters } from '../types/items';
 import { api, API_BASE_URL } from '../config/api';
 
 class ItemService {
 	// Items CRUD operations
-	async createItem(userId: string, itemData: CreateItemData): Promise<Item | null> {
+	async createItem(itemData: CreateItemData): Promise<Item | null> {
 		try {
-			console.log('Creating item with userId:', userId, 'itemData:', itemData);
-
-			const payload = {
-				user_id: userId,
-				title: itemData.title,
-				description: itemData.description,
-				category: itemData.category,
-				condition: itemData.condition,
-				images: itemData.images,
-				specs: itemData.specs,
-				location: itemData.location,
-				status: 'available'
-			};
-
-			console.log('Sending payload to API:', payload);
-
-			// Check if we have a token
-			const token = localStorage.getItem('bayanihan_token');
-			console.log('Token for API call:', token ? 'Present' : 'Missing');
-
-			if (!token) {
-				throw new Error('No authentication token found');
-			}
-
-			const created = await api.post<any>('/items/', payload);
-			console.log('API response:', created);
-
-			return this.mapApiItemToItem(created);
+			const created = await api.post<Item>('/items/', itemData);
+			return created;
 		} catch (error: any) {
 			console.error('Error creating item:', error);
-			console.error('Error details:', {
-				message: error.message,
-				stack: error.stack,
-				name: error.name
-			});
 			return null;
 		}
 	}
 
 	async getItemById(id: string): Promise<Item | null> {
 		try {
-			const item = await api.get<any>(`/items/${id}`);
-			return this.mapApiItemToItem(item);
+			const item = await api.get<Item>(`/items/${id}`);
+			return item;
 		} catch (error: any) {
 			console.error('Error getting item by ID:', error);
 			return null;
@@ -61,13 +29,11 @@ class ItemService {
 			if (filters.userId) params.set('user_id', filters.userId);
 			if (filters.status) params.set('status', filters.status);
 			if (filters.category) params.set('category', filters.category);
-			const items = await api.get<any[]>(`/items/?${params.toString()}`);
-			let mapped = items.map(i => this.mapApiItemToItem(i));
-			if (filters.search) {
-				const searchTerm = filters.search.toLowerCase();
-				mapped = mapped.filter(item => item.title.toLowerCase().includes(searchTerm) || item.description.toLowerCase().includes(searchTerm));
-			}
-			return mapped;
+			if (filters.limit) params.set('limit', filters.limit.toString());
+			if (filters.offset) params.set('offset', filters.offset.toString());
+
+			const items = await api.get<Item[]>(`/items/?${params.toString()}`);
+			return items;
 		} catch (error: any) {
 			console.error('Error getting items:', error);
 			return [];
@@ -76,11 +42,8 @@ class ItemService {
 
 	async updateItem(id: string, updates: UpdateItemData): Promise<Item | null> {
 		try {
-			const updated = await api.patch<any>(`/items/${id}`, {
-				...updates,
-				location: updates.location
-			});
-			return this.mapApiItemToItem(updated);
+			const updated = await api.patch<Item>(`/items/${id}`, updates);
+			return updated;
 		} catch (error: any) {
 			console.error('Error updating item:', error);
 			return null;
@@ -94,12 +57,8 @@ class ItemService {
 				'Content-Type': 'application/json'
 			};
 
-			// Only include Authorization header for JWT tokens (not UUID tokens from offline mode)
 			if (token) {
-				const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-				if (!uuidRegex.test(token)) {
-					headers['Authorization'] = `Bearer ${token}`;
-				}
+				headers['Authorization'] = `Bearer ${token}`;
 			}
 
 			const response = await fetch(`${API_BASE_URL}/items/${id}`, {
@@ -145,7 +104,8 @@ class ItemService {
 		}
 	}
 
-	private formatPostedAgo(date: Date): string {
+	formatPostedAgo(dateString: string): string {
+		const date = new Date(dateString);
 		const now = new Date();
 		const diffMs = now.getTime() - date.getTime();
 		const diffMins = Math.floor(diffMs / 60000);
@@ -162,39 +122,6 @@ class ItemService {
 		if (diffWeeks < 4) return `${diffWeeks} week${diffWeeks > 1 ? 's' : ''} ago`;
 		if (diffMonths < 12) return `${diffMonths} month${diffMonths > 1 ? 's' : ''} ago`;
 		return `${diffYears} year${diffYears > 1 ? 's' : ''} ago`;
-	}
-
-	private mapApiItemToItem(apiItem: any): Item {
-		let images: string[] = [];
-		try {
-			if (Array.isArray(apiItem.images)) images = apiItem.images;
-			else if (typeof apiItem.images === 'string' && apiItem.images.trim()) images = JSON.parse(apiItem.images);
-		} catch { }
-		const createdAt = apiItem.created_at ? new Date(apiItem.created_at) : new Date();
-		return {
-			id: apiItem.id,
-			userId: apiItem.user_id,
-			title: apiItem.title,
-			description: apiItem.description ?? '',
-			category: apiItem.category ?? '',
-			condition: apiItem.condition ?? '',
-			images,
-			specs: apiItem.specs || {},
-			location: apiItem.location || undefined,
-			status: apiItem.status,
-			views: apiItem.views ?? 0,
-			createdAt,
-			updatedAt: apiItem.updated_at ? new Date(apiItem.updated_at) : new Date(),
-			postedAgo: this.formatPostedAgo(createdAt),
-			offersCount: apiItem.offers_count ?? apiItem.offersCount ?? 0,
-			owner: (apiItem.owner && apiItem.owner.id)
-				? apiItem.owner
-				: (apiItem.owner_name && apiItem.owner_id)
-					? { id: apiItem.owner_id, name: apiItem.owner_name }
-					: undefined,
-			latitude: apiItem.latitude,
-			longitude: apiItem.longitude
-		};
 	}
 }
 

@@ -96,8 +96,8 @@
 			const trades = await tradeService.getTrades({ userId: currentUser.id });
 			const existingTrade = trades.find((t) => {
 				return (
-					(t.fromUserId === currentUser.id && t.toUserId === targetItem.userId) ||
-					(t.toUserId === currentUser.id && t.fromUserId === targetItem.userId)
+					(t.from_user_id === currentUser.id && t.to_user_id === targetItem.user_id) ||
+					(t.to_user_id === currentUser.id && t.from_user_id === targetItem.user_id)
 				);
 			});
 
@@ -111,20 +111,20 @@
 			const quickMessage =
 				`Hi ${targetItem.owner?.name || ''}, I'm interested in your "${targetItem.title}".`.trim();
 
-			const createdTrade = await tradeService.createTrade(currentUser.id, {
-				toUserId: targetItem.userId,
+			const createdTrade = await tradeService.createTrade({
+				to_user_id: targetItem.user_id,
 				// Use the viewed item as both from/to to satisfy backend shape;
 				// this acts as a lightweight "chat context" for this item.
-				fromItemId: targetItem.id,
-				toItemId: targetItem.id,
+				from_item_id: targetItem.id,
+				to_item_id: targetItem.id,
 				message: quickMessage
 			});
 
 			if (createdTrade) {
 				try {
-					await messageService.createMessage(currentUser.id, {
-						tradeId: createdTrade.id,
-						receiverId: targetItem.userId,
+					await messageService.createMessage({
+						trade_id: createdTrade.id,
+						receiver_id: targetItem.user_id,
 						content: quickMessage
 					});
 				} catch (msgErr) {
@@ -224,6 +224,7 @@
 							<button
 								onclick={prevImage}
 								class="absolute left-4 top-1/2 -translate-y-1/2 transform rounded-full bg-black bg-opacity-50 p-2 text-white transition-all hover:bg-opacity-70"
+								aria-label="Previous image"
 							>
 								<svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 									<path
@@ -237,6 +238,7 @@
 							<button
 								onclick={nextImage}
 								class="absolute right-4 top-1/2 -translate-y-1/2 transform rounded-full bg-black bg-opacity-50 p-2 text-white transition-all hover:bg-opacity-70"
+								aria-label="Next image"
 							>
 								<svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 									<path
@@ -265,6 +267,7 @@
 									onclick={() => (currentImageIndex = index)}
 									class="relative overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm transition-shadow hover:shadow-md
 										{currentImageIndex === index ? 'ring-2 ring-red-500' : ''}"
+									aria-label={`View image ${index + 1}`}
 								>
 									<img src={image} alt="Thumbnail {index + 1}" class="h-20 w-full object-cover" />
 								</button>
@@ -291,7 +294,7 @@
 							</div>
 							<div class="text-right">
 								<div class="text-sm text-gray-500">Posted</div>
-								<div class="font-medium">{item.postedAgo}</div>
+								<div class="font-medium">{itemService.formatPostedAgo(item.created_at)}</div>
 							</div>
 						</div>
 
@@ -351,13 +354,13 @@
 								<div class="rounded-xl border border-gray-100 bg-gray-50 p-4">
 									<div class="text-xs text-gray-500">Created</div>
 									<div class="font-medium text-gray-900">
-										{new Date(item.createdAt).toLocaleString()}
+										{new Date(item.created_at).toLocaleString()}
 									</div>
 								</div>
 								<div class="rounded-xl border border-gray-100 bg-gray-50 p-4">
 									<div class="text-xs text-gray-500">Updated</div>
 									<div class="font-medium text-gray-900">
-										{new Date(item.updatedAt).toLocaleString()}
+										{new Date(item.updated_at).toLocaleString()}
 									</div>
 								</div>
 							</div>
@@ -370,7 +373,7 @@
 								<div class="text-sm text-gray-500">Views</div>
 							</div>
 							<div class="text-center">
-								<div class="text-2xl font-bold text-gray-900">{item.offersCount || 0}</div>
+								<div class="text-2xl font-bold text-gray-900">{0}</div>
 								<div class="text-sm text-gray-500">Offers</div>
 							</div>
 						</div>
@@ -402,7 +405,7 @@
 							</div>
 							<div class="flex-1">
 								<div class="font-semibold text-gray-900 transition-colors hover:text-red-600">
-									{item.owner?.name || 'User'}
+									{item.owner?.name || item.owner_name || 'User'}
 								</div>
 								<div class="text-sm text-gray-500">
 									{#if item.owner?.rating}
@@ -431,7 +434,7 @@
 					<!-- Action Buttons -->
 					<div class="space-y-3">
 						{#if isAuthenticated}
-							{#if item.userId !== user?.id}
+							{#if item.user_id !== user?.id}
 								<button
 									onclick={handleMakeOffer}
 									class="w-full rounded-xl bg-red-600 px-6 py-4 text-lg font-semibold text-white shadow-sm transition-colors hover:bg-red-700 hover:shadow-md"

@@ -66,21 +66,21 @@
 
 		try {
 			const tradeData: CreateTradeData = {
-				toUserId: targetItem.userId,
-				fromItemId: selectedItem.id,
-				toItemId: targetItem.id,
+				to_user_id: targetItem.user_id,
+				from_item_id: selectedItem.id,
+				to_item_id: targetItem.id,
 				message: message.trim() || `I'd like to trade my ${selectedItem.title} for your ${targetItem.title}`
 			};
 
-			const createdTrade = await tradeService.createTrade(authState.user.id, tradeData);
+			const createdTrade = await tradeService.createTrade(tradeData);
 			
 			if (createdTrade) {
 				// Create initial message automatically when trade offer is made
 				try {
 					const messageContent = message.trim() || `I'd like to trade my ${selectedItem.title} for your ${targetItem.title}`;
-					await messageService.createMessage(authState.user.id, {
-						tradeId: createdTrade.id,
-						receiverId: targetItem.userId,
+					await messageService.createMessage({
+						trade_id: createdTrade.id,
+						receiver_id: targetItem.user_id,
 						content: messageContent
 					});
 				} catch (msgError) {

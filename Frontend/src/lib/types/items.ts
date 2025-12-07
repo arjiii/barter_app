@@ -1,6 +1,6 @@
 export interface Item {
 	id: string;
-	userId: string;
+	user_id: string;
 	title: string;
 	description: string;
 	category: string;
@@ -12,17 +12,17 @@ export interface Item {
 	longitude?: number;
 	status: 'available' | 'traded' | 'removed' | 'draft' | 'pending';
 	views: number;
-	createdAt: Date;
-	updatedAt: Date;
-	// Computed fields
+	created_at: string; // Backend sends ISO string
+	updated_at: string; // Backend sends ISO string
+	// Computed fields (backend sends these flattened or nested)
+	owner_id?: string;
+	owner_name?: string;
 	owner?: {
 		id: string;
 		name: string;
 		avatar?: string;
 		rating?: number;
 	};
-	offersCount?: number;
-	postedAgo?: string;
 	distance?: number; // Distance from user in kilometers (computed client-side)
 }
 
@@ -44,6 +44,7 @@ export interface CreateItemData {
 	location?: string;
 	latitude?: number;
 	longitude?: number;
+	status?: 'available' | 'traded' | 'removed' | 'draft' | 'pending';
 }
 
 export interface UpdateItemData {
@@ -54,6 +55,9 @@ export interface UpdateItemData {
 	images?: string[];
 	status?: Item['status'];
 	location?: string;
+	latitude?: number;
+	longitude?: number;
+	specs?: Record<string, string>;
 }
 
 export interface ItemFilters {

@@ -11,6 +11,8 @@ from .. import models
 from ..security import create_access_token
 from ..supabase_client import get_supabase_client
 
+from ..config import settings
+
 router = APIRouter(prefix="/supabase-auth", tags=["supabase-auth"])
 
 
@@ -54,7 +56,7 @@ async def supabase_signup(payload: dict, db: Session = Depends(get_db)):
 			"password": password,
 			"options": {
 				"data": {"name": name},
-				"email_redirect_to": "http://localhost:5173/auth/callback"
+				"email_redirect_to": f"{settings.FRONTEND_URL}/auth/callback"
 			}
 		})
 		
@@ -70,6 +72,7 @@ async def supabase_signup(payload: dict, db: Session = Depends(get_db)):
 			supabase_user_id=auth_response.user.id,
 			name=name,
 			email=email,
+			password_hash="SUPABASE_AUTH", # Placeholder as Supabase handles auth
 			location=payload.get("location"),
 			latitude=payload.get("latitude"),
 			longitude=payload.get("longitude"),

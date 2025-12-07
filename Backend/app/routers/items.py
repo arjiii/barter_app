@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session
 from uuid import uuid4
 from ..database import get_db
 from .. import models, schemas
+from ..dependencies import get_current_user
 
 
 router = APIRouter(prefix="/items", tags=["items"])
@@ -29,6 +30,7 @@ def _serialize_item(item: models.Item, owner_name: str | None = None, owner_id: 
         "category": item.category,
         "condition": item.condition,
         "images": images_value,
+        "specs": item.specs,
         "location": getattr(item, "location", None),
         "latitude": getattr(item, "latitude", None),
         "longitude": getattr(item, "longitude", None),
@@ -45,7 +47,7 @@ def _serialize_item(item: models.Item, owner_name: str | None = None, owner_id: 
     return data
 
 
-@router.get("/")
+@router.get("/", response_model=list[schemas.Item])
 def list_items(
 	user_id: str | None = Query(default=None),
 	status: str | None = Query(default=None),
@@ -122,31 +124,37 @@ def list_items(
 
 
 @router.post("/", response_model=schemas.Item)
-def create_item(payload: dict, db: Session = Depends(get_db)):
-	try:
-		obj = models.Item(
-			id=str(uuid4()),
-			user_id=payload["user_id"],
-			title=payload["title"],
-			description=payload.get("description"),
-			category=payload.get("category"),
-			condition=payload.get("condition"),
-			images=payload.get("images"),
-			specs=payload.get("specs"),
-			location=payload.get("location"),
-			latitude=payload.get("latitude"),
-			longitude=payload.get("longitude"),
-			status=payload.get("status", "available"),
-		)
-		db.add(obj)
-		db.commit()
-		db.refresh(obj)
-		return obj
-	except Exception as e:
-		raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")
+def create_item(
+    payload: schemas.ItemCreate, 
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user)
+):
+    try:
+        obj = models.Item(
+            id=str(uuid4()),
+            user_id=current_user.id, # Enforce current user as owner
+            title=payload.title,
+            description=payload.description,
+            category=payload.category,
+            condition=payload.condition,
+            images=payload.images,
+            specs=payload.specs,
+            location=payload.location,
+            latitude=payload.latitude,
+            longitude=payload.longitude,
+            status=payload.status or "available",
+        )
+        db.add(obj)
+        db.commit()
+        db.refresh(obj)
+        
+        # Return with owner info
+        return _serialize_item(obj, current_user.name, current_user.id)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")
 
 
-@router.get("/{item_id}")
+@router.get("/{item_id}", response_model=schemas.Item)
 def get_item(item_id: str, db: Session = Depends(get_db)):
     row = (
         db.query(
@@ -165,27 +173,47 @@ def get_item(item_id: str, db: Session = Depends(get_db)):
 
 
 @router.patch("/{item_id}", response_model=schemas.Item)
-def update_item(item_id: str, payload: dict, db: Session = Depends(get_db)):
+def update_item(
+    item_id: str, 
+    payload: schemas.ItemUpdate, 
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user)
+):
     obj = db.query(models.Item).filter(models.Item.id == item_id).first()
     if not obj:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Item not found")
 
-    allowed_fields = {"title", "description", "category", "condition", "images", "status", "location", "latitude", "longitude"}
-    for field in allowed_fields:
-        if field in payload:
-            setattr(obj, field, payload[field])
+    # Authorization check
+    if obj.user_id != current_user.id and current_user.role != 'admin':
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized to update this item")
+
+    update_data = payload.model_dump(exclude_unset=True)
+    for field, value in update_data.items():
+        setattr(obj, field, value)
 
     db.commit()
     db.refresh(obj)
-    return obj
+    
+    # Fetch owner info for response
+    owner = db.query(models.User).filter(models.User.id == obj.user_id).first()
+    return _serialize_item(obj, owner.name if owner else None, obj.user_id)
 
 
 @router.delete("/{item_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_item(item_id: str, db: Session = Depends(get_db)):
+def delete_item(
+    item_id: str, 
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user)
+):
     obj = db.query(models.Item).filter(models.Item.id == item_id).first()
     if not obj:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Item not found")
+        
+    # Authorization check
+    if obj.user_id != current_user.id and current_user.role != 'admin':
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized to delete this item")
+        
     db.delete(obj)
     db.commit()
-    return {"message": "Item deleted"}
+    return None
 

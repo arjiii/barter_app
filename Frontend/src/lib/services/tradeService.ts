@@ -1,4 +1,3 @@
-import { v4 as uuidv4 } from 'uuid';
 import type { Trade, CreateTradeData, UpdateTradeData, TradeFilters } from '../types/trades';
 import { api, API_BASE_URL } from '../config/api';
 
@@ -27,17 +26,10 @@ function getAuthHeaders(): Record<string, string> {
 
 class TradeService {
 	// Trades CRUD operations
-	async createTrade(fromUserId: string, tradeData: CreateTradeData): Promise<Trade | null> {
+	async createTrade(tradeData: CreateTradeData): Promise<Trade | null> {
 		try {
-			const created = await api.post<any>('/trades/', {
-				from_user_id: fromUserId,
-				to_user_id: tradeData.toUserId,
-				from_item_id: tradeData.fromItemId,
-				to_item_id: tradeData.toItemId,
-				message: tradeData.message,
-				status: 'pending'
-			});
-			return this.mapApiTradeToTrade(created);
+			const created = await api.post<Trade>('/trades/', tradeData);
+			return created;
 		} catch (error) {
 			console.error('Error creating trade:', error);
 			return null;
@@ -46,8 +38,8 @@ class TradeService {
 
 	async getTradeById(id: string): Promise<Trade | null> {
 		try {
-			const trade = await api.get<any>(`/trades/${id}`);
-			return this.mapApiTradeToTrade(trade);
+			const trade = await api.get<Trade>(`/trades/${id}`);
+			return trade;
 		} catch (error) {
 			console.error('Error getting trade:', error);
 			return null;
@@ -58,10 +50,12 @@ class TradeService {
 		try {
 			const params = new URLSearchParams();
 			if (filters.userId) params.set('user_id', filters.userId);
-			const trades = await api.get<any[]>(`/trades/?${params.toString()}`);
-			let mapped = trades.map((t) => this.mapApiTradeToTrade(t));
-			if (filters.status) mapped = mapped.filter((t) => t.status === filters.status);
-			return mapped;
+			const trades = await api.get<Trade[]>(`/trades/?${params.toString()}`);
+
+			// Client-side filtering if needed (backend handles user_id)
+			if (filters.status) return trades.filter((t) => t.status === filters.status);
+
+			return trades;
 		} catch (error) {
 			console.error('Error getting trades:', error);
 			return [];
@@ -79,7 +73,7 @@ class TradeService {
 				throw new Error(`HTTP ${updated.status}`);
 			}
 			const data = await updated.json();
-			return this.mapApiTradeToTrade(data);
+			return data;
 		} catch (error) {
 			console.error('Error updating trade:', error);
 			return null;
@@ -99,7 +93,7 @@ class TradeService {
 		}
 	}
 
-	async acceptTrade(tradeId: string, userId: string): Promise<boolean> {
+	async acceptTrade(tradeId: string): Promise<boolean> {
 		try {
 			// Accepting a trade automatically moves it to 'active' status
 			const updated = await this.updateTrade(tradeId, { status: 'active' });
@@ -110,7 +104,7 @@ class TradeService {
 		}
 	}
 
-	async rejectTrade(tradeId: string, userId: string): Promise<boolean> {
+	async rejectTrade(tradeId: string): Promise<boolean> {
 		try {
 			const updated = await this.updateTrade(tradeId, { status: 'rejected' });
 			return updated !== null;
@@ -120,7 +114,7 @@ class TradeService {
 		}
 	}
 
-	async completeTrade(tradeId: string, userId: string): Promise<boolean> {
+	async completeTrade(tradeId: string): Promise<boolean> {
 		try {
 			const updated = await this.updateTrade(tradeId, { status: 'completed' });
 			return updated !== null;
@@ -128,12 +122,11 @@ class TradeService {
 			console.error('Error completing trade:', error);
 			return false;
 		}
-	} // ✅ fixed: missing closing brace
+	}
 
 	// ⭐ New: Rate Trade function
 	async rateTrade(
 		tradeId: string,
-		raterUserId: string,
 		rateeUserId: string,
 		score: number,
 		feedback?: string
@@ -143,7 +136,6 @@ class TradeService {
 				method: 'POST',
 				headers: getAuthHeaders(),
 				body: JSON.stringify({
-					rater_user_id: raterUserId,
 					ratee_user_id: rateeUserId,
 					score,
 					feedback
@@ -174,23 +166,6 @@ class TradeService {
 			console.error('Error checking if user rated:', error);
 			return false;
 		}
-	}
-
-	private mapApiTradeToTrade(t: any): Trade {
-		return {
-			id: t.id,
-			fromUserId: t.from_user_id,
-			toUserId: t.to_user_id,
-			fromItemId: t.from_item_id,
-			toItemId: t.to_item_id,
-			message: t.message ?? '',
-			status: t.status,
-			expiresAt: t.expires_at ? new Date(t.expires_at) : undefined,
-			meetingLocation: t.meeting_location,
-			meetingTime: t.meeting_time ? new Date(t.meeting_time) : undefined,
-			createdAt: t.created_at ? new Date(t.created_at) : new Date(),
-			updatedAt: t.updated_at ? new Date(t.updated_at) : new Date()
-		};
 	}
 }
 

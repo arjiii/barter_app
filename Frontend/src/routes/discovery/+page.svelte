@@ -96,13 +96,13 @@
 					if (aHasDist && bHasDist) {
 						// If distances are essentially equal (within 10 meters), sort by date
 						if (Math.abs(a.distance! - b.distance!) < 0.01) {
-							return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+							return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
 						}
 						return a.distance! - b.distance!;
 					}
 
 					// 3. Secondary sort for items without distance: Newest first
-					return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+					return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
 				});
 			}
 
@@ -503,7 +503,7 @@
 													d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
 												></path>
 											</svg>
-											<span>{item.postedAgo || 'Recently'}</span>
+											<span>{itemService.formatPostedAgo(item.created_at)}</span>
 										</div>
 									</div>
 								</div>
@@ -529,7 +529,7 @@
 												</span>
 											</div>
 											<span class="text-sm font-medium text-gray-600 hover:text-red-600"
-												>{item.owner?.name || 'User'}</span
+												>{item.owner?.name || item.owner_name || 'User'}</span
 											>
 										</button>
 									</div>
@@ -545,7 +545,7 @@
 										>
 											View Details
 										</button>
-										{#if isAuthenticated && item.userId !== user?.id}
+										{#if isAuthenticated && item.user_id !== user?.id}
 											<button
 												onclick={(e) => handleTradeOffer(item, e)}
 												class="flex-1 rounded-lg bg-red-600 px-3 py-2 text-sm font-medium text-white transition-colors hover:bg-red-700"

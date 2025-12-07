@@ -3,7 +3,7 @@
 	import { authStore } from '$lib/stores/authStore';
 	import { itemService } from '$lib/services/itemService';
 	import type { CreateItemData, Category } from '$lib/types/items';
-import { notificationStore } from '$lib/stores/notificationStore';
+	import { notificationStore } from '$lib/stores/notificationStore';
 
 	const dispatch = createEventDispatcher();
 
@@ -28,7 +28,7 @@ import { notificationStore } from '$lib/stores/notificationStore';
 	let categories: Category[] = $state([]);
 	let selectedImages: File[] = $state([]);
 	let imagePreviewUrls: string[] = $state([]);
-let otherCategory = $state('');
+	let otherCategory = $state('');
 
 	const conditions = [
 		{ value: 'excellent', label: 'Excellent' },
@@ -80,7 +80,7 @@ let otherCategory = $state('');
 	function handleImageSelect(event: Event) {
 		const target = event.target as HTMLInputElement;
 		const files = Array.from(target.files || []);
-		
+
 		if (files.length > 0) {
 			selectedImages = [...selectedImages, ...files].slice(0, 5); // Max 5 images
 			updateImagePreviews();
@@ -89,12 +89,12 @@ let otherCategory = $state('');
 
 	function updateImagePreviews() {
 		// Clean up old blob URLs to prevent memory leaks
-		imagePreviewUrls.forEach(url => {
+		imagePreviewUrls.forEach((url) => {
 			if (url.startsWith('blob:')) {
 				URL.revokeObjectURL(url);
 			}
 		});
-		imagePreviewUrls = selectedImages.map(file => URL.createObjectURL(file));
+		imagePreviewUrls = selectedImages.map((file) => URL.createObjectURL(file));
 	}
 
 	function removeImage(index: number) {
@@ -115,19 +115,19 @@ let otherCategory = $state('');
 
 		try {
 			console.log('Starting item creation process...');
-			
+
 			// Get current user ID from auth store
 			const authState = authStore.get();
 			console.log('Auth state:', authState);
-			
+
 			if (!authState.user) {
 				throw new Error('User not authenticated - please sign in again');
 			}
-			
+
 			if (!authState.isAuthenticated) {
 				throw new Error('Authentication state is false - please sign in again');
 			}
-			
+
 			console.log('User authenticated:', authState.user.id);
 			console.log('User name:', authState.user.name);
 			console.log('User email:', authState.user.email);
@@ -152,7 +152,7 @@ let otherCategory = $state('');
 
 			const itemData = {
 				...formData,
-				category: formData.category === 'others' ? (otherCategory || 'Others') : formData.category,
+				category: formData.category === 'others' ? otherCategory || 'Others' : formData.category,
 				images: imageUrls
 			};
 
@@ -170,20 +170,20 @@ let otherCategory = $state('');
 				dispatch('itemUpdated', result);
 			} else {
 				// Create new item
-				result = await itemService.createItem(authState.user.id, itemData);
+				result = await itemService.createItem(itemData);
 				console.log('Item created:', result);
 
 				if (!result) {
-				throw new Error('Item creation returned null - check backend logs');
+					throw new Error('Item creation returned null - check backend logs');
+				}
+
+				success = 'Item posted successfully!';
+				notificationStore.push('Your item has been posted');
+
+				// Dispatch event immediately
+				dispatch('itemPosted');
 			}
-			
-			success = 'Item posted successfully!';
-			notificationStore.push('Your item has been posted');
-			
-			// Dispatch event immediately
-			dispatch('itemPosted');
-			}
-			
+
 			// Reset form
 			formData = {
 				title: '',
@@ -200,7 +200,6 @@ let otherCategory = $state('');
 			setTimeout(() => {
 				isOpen = false;
 			}, 1500);
-
 		} catch (err) {
 			error = `Failed to post item: ${err.message}`;
 			console.error('Error posting item:', err);
@@ -213,14 +212,14 @@ let otherCategory = $state('');
 		isOpen = false;
 		error = null;
 		success = null;
-		
+
 		// Clean up blob URLs
-		imagePreviewUrls.forEach(url => {
+		imagePreviewUrls.forEach((url) => {
 			if (url.startsWith('blob:')) {
 				URL.revokeObjectURL(url);
 			}
 		});
-		
+
 		// Reset form
 		formData = {
 			title: '',
@@ -244,28 +243,32 @@ let otherCategory = $state('');
 	<div class="fixed inset-0 z-50 overflow-y-auto" on:click={closeModal}>
 		<div class="flex min-h-screen items-center justify-center p-4">
 			<!-- Modal Content -->
-			<div 
-				class="relative bg-white rounded-2xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto"
+			<div
+				class="relative max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl bg-white shadow-xl"
 				on:click|stopPropagation
 			>
 				<!-- Header -->
-				<div class="flex items-center justify-between p-6 border-b border-gray-200">
-					<h2 class="text-2xl font-bold text-gray-900">{editItem ? 'Edit Item' : 'Post New Item'}</h2>
-					<button 
-						on:click={closeModal}
-						class="text-gray-400 hover:text-gray-600 transition-colors"
-					>
-						<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+				<div class="flex items-center justify-between border-b border-gray-200 p-6">
+					<h2 class="text-2xl font-bold text-gray-900">
+						{editItem ? 'Edit Item' : 'Post New Item'}
+					</h2>
+					<button on:click={closeModal} class="text-gray-400 transition-colors hover:text-gray-600">
+						<svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+							<path
+								stroke-linecap="round"
+								stroke-linejoin="round"
+								stroke-width="2"
+								d="M6 18L18 6M6 6l12 12"
+							></path>
 						</svg>
 					</button>
 				</div>
 
 				<!-- Form -->
-				<form on:submit|preventDefault={handleSubmit} class="p-6 space-y-6">
+				<form on:submit|preventDefault={handleSubmit} class="space-y-6 p-6">
 					<!-- Title -->
 					<div>
-						<label for="title" class="block text-sm font-medium text-gray-700 mb-2">
+						<label for="title" class="mb-2 block text-sm font-medium text-gray-700">
 							Item Title *
 						</label>
 						<input
@@ -273,14 +276,14 @@ let otherCategory = $state('');
 							type="text"
 							bind:value={formData.title}
 							placeholder="Enter item title..."
-							class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-colors"
+							class="w-full rounded-xl border border-gray-300 px-4 py-3 transition-colors focus:border-red-500 focus:outline-none focus:ring-2 focus:ring-red-500"
 							required
 						/>
 					</div>
 
 					<!-- Description -->
 					<div>
-						<label for="description" class="block text-sm font-medium text-gray-700 mb-2">
+						<label for="description" class="mb-2 block text-sm font-medium text-gray-700">
 							Description *
 						</label>
 						<textarea
@@ -288,42 +291,46 @@ let otherCategory = $state('');
 							bind:value={formData.description}
 							placeholder="Describe your item..."
 							rows="4"
-							class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-colors resize-none"
+							class="w-full resize-none rounded-xl border border-gray-300 px-4 py-3 transition-colors focus:border-red-500 focus:outline-none focus:ring-2 focus:ring-red-500"
 							required
 						></textarea>
 					</div>
 
 					<!-- Category and Condition -->
-					<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+					<div class="grid grid-cols-1 gap-4 md:grid-cols-2">
 						<div>
-							<label for="category" class="block text-sm font-medium text-gray-700 mb-2">
+							<label for="category" class="mb-2 block text-sm font-medium text-gray-700">
 								Category *
 							</label>
 							<select
 								id="category"
 								bind:value={formData.category}
-								class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-colors"
+								class="w-full rounded-xl border border-gray-300 px-4 py-3 transition-colors focus:border-red-500 focus:outline-none focus:ring-2 focus:ring-red-500"
 								required
 							>
 								<option value="">Select category...</option>
 								{#each categories as category}
 									<option value={category.id}>{category.name}</option>
 								{/each}
-						<option value="others">Others (please specify)</option>
+								<option value="others">Others (please specify)</option>
 							</select>
-					{#if formData.category === 'others'}
-						<input class="mt-2 w-full px-4 py-3 border border-gray-300 rounded-xl" placeholder="Type category" bind:value={otherCategory} />
-					{/if}
+							{#if formData.category === 'others'}
+								<input
+									class="mt-2 w-full rounded-xl border border-gray-300 px-4 py-3"
+									placeholder="Type category"
+									bind:value={otherCategory}
+								/>
+							{/if}
 						</div>
 
 						<div>
-							<label for="condition" class="block text-sm font-medium text-gray-700 mb-2">
+							<label for="condition" class="mb-2 block text-sm font-medium text-gray-700">
 								Condition *
 							</label>
 							<select
 								id="condition"
 								bind:value={formData.condition}
-								class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-colors"
+								class="w-full rounded-xl border border-gray-300 px-4 py-3 transition-colors focus:border-red-500 focus:outline-none focus:ring-2 focus:ring-red-500"
 								required
 							>
 								<option value="">Select condition...</option>
@@ -336,7 +343,7 @@ let otherCategory = $state('');
 
 					<!-- Location -->
 					<div>
-						<label for="location" class="block text-sm font-medium text-gray-700 mb-2">
+						<label for="location" class="mb-2 block text-sm font-medium text-gray-700">
 							Location (City/Province)
 						</label>
 						<input
@@ -344,18 +351,18 @@ let otherCategory = $state('');
 							type="text"
 							bind:value={formData.location}
 							placeholder="e.g., Manila, Metro Manila or Quezon City"
-							class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-colors"
+							class="w-full rounded-xl border border-gray-300 px-4 py-3 transition-colors focus:border-red-500 focus:outline-none focus:ring-2 focus:ring-red-500"
 						/>
 					</div>
 
 					<!-- Images -->
 					<div>
-						<label class="block text-sm font-medium text-gray-700 mb-2">
-							Photos (up to 5)
-						</label>
-						
+						<label class="mb-2 block text-sm font-medium text-gray-700"> Photos (up to 5) </label>
+
 						<!-- Image Upload Area -->
-						<div class="border-2 border-dashed border-gray-300 rounded-xl p-6 text-center hover:border-gray-400 transition-colors">
+						<div
+							class="rounded-xl border-2 border-dashed border-gray-300 p-6 text-center transition-colors hover:border-gray-400"
+						>
 							<input
 								type="file"
 								accept="image/*"
@@ -365,24 +372,38 @@ let otherCategory = $state('');
 								id="image-upload"
 							/>
 							<label for="image-upload" class="cursor-pointer">
-								<svg class="mx-auto h-12 w-12 text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+								<svg
+									class="mx-auto mb-4 h-12 w-12 text-gray-400"
+									fill="none"
+									stroke="currentColor"
+									viewBox="0 0 24 24"
+								>
+									<path
+										stroke-linecap="round"
+										stroke-linejoin="round"
+										stroke-width="2"
+										d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+									></path>
 								</svg>
-								<p class="text-gray-600 mb-2">Click to upload photos</p>
+								<p class="mb-2 text-gray-600">Click to upload photos</p>
 								<p class="text-sm text-gray-500">PNG, JPG up to 10MB each</p>
 							</label>
 						</div>
 
 						<!-- Image Previews -->
 						{#if imagePreviewUrls.length > 0}
-							<div class="grid grid-cols-2 md:grid-cols-3 gap-4 mt-4">
+							<div class="mt-4 grid grid-cols-2 gap-4 md:grid-cols-3">
 								{#each imagePreviewUrls as url, index}
 									<div class="relative">
-										<img src={url} alt="Preview {index + 1}" class="w-full h-32 object-cover rounded-lg" />
-								<button
+										<img
+											src={url}
+											alt="Preview {index + 1}"
+											class="h-32 w-full rounded-lg object-cover"
+										/>
+										<button
 											type="button"
-									on:click={() => removeImage(index)}
-											class="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm hover:bg-red-600 transition-colors"
+											on:click={() => removeImage(index)}
+											class="absolute -right-2 -top-2 flex h-6 w-6 items-center justify-center rounded-full bg-red-500 text-sm text-white transition-colors hover:bg-red-600"
 										>
 											×
 										</button>
@@ -394,45 +415,80 @@ let otherCategory = $state('');
 
 					<!-- Error/Success Messages -->
 					{#if error}
-						<div class="bg-red-50 border border-red-200 rounded-xl p-4">
+						<div class="rounded-xl border border-red-200 bg-red-50 p-4">
 							<div class="flex">
-								<svg class="h-5 w-5 text-red-400 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"></path>
+								<svg
+									class="mr-2 h-5 w-5 text-red-400"
+									fill="none"
+									stroke="currentColor"
+									viewBox="0 0 24 24"
+								>
+									<path
+										stroke-linecap="round"
+										stroke-linejoin="round"
+										stroke-width="2"
+										d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"
+									></path>
 								</svg>
-								<p class="text-red-800 text-sm">{error}</p>
+								<p class="text-sm text-red-800">{error}</p>
 							</div>
 						</div>
 					{/if}
 
 					{#if success}
-						<div class="bg-green-50 border border-green-200 rounded-xl p-4">
+						<div class="rounded-xl border border-green-200 bg-green-50 p-4">
 							<div class="flex">
-								<svg class="h-5 w-5 text-green-400 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+								<svg
+									class="mr-2 h-5 w-5 text-green-400"
+									fill="none"
+									stroke="currentColor"
+									viewBox="0 0 24 24"
+								>
+									<path
+										stroke-linecap="round"
+										stroke-linejoin="round"
+										stroke-width="2"
+										d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+									></path>
 								</svg>
-								<p class="text-green-800 text-sm">{success}</p>
+								<p class="text-sm text-green-800">{success}</p>
 							</div>
 						</div>
 					{/if}
 
 					<!-- Actions -->
-					<div class="flex justify-end space-x-4 pt-4 border-t border-gray-200">
+					<div class="flex justify-end space-x-4 border-t border-gray-200 pt-4">
 						<button
 							type="button"
 							on:click={closeModal}
-							class="px-6 py-3 text-gray-700 bg-gray-100 rounded-xl hover:bg-gray-200 transition-colors font-medium"
+							class="rounded-xl bg-gray-100 px-6 py-3 font-medium text-gray-700 transition-colors hover:bg-gray-200"
 						>
 							Cancel
 						</button>
 						<button
 							type="submit"
 							disabled={isLoading}
-							class="px-6 py-3 bg-red-600 text-white rounded-xl hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium flex items-center"
+							class="flex items-center rounded-xl bg-red-600 px-6 py-3 font-medium text-white transition-colors hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
 						>
 							{#if isLoading}
-								<svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
-									<circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-									<path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+								<svg
+									class="-ml-1 mr-2 h-4 w-4 animate-spin text-white"
+									fill="none"
+									viewBox="0 0 24 24"
+								>
+									<circle
+										class="opacity-25"
+										cx="12"
+										cy="12"
+										r="10"
+										stroke="currentColor"
+										stroke-width="4"
+									></circle>
+									<path
+										class="opacity-75"
+										fill="currentColor"
+										d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+									></path>
 								</svg>
 							{/if}
 							{isLoading ? 'Posting...' : 'Post Item'}

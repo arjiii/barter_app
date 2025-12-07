@@ -42,7 +42,7 @@ function createMessagesStore() {
 			update((current) => ({
 				...current,
 				items: data.sort(
-					(a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+					(a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
 				),
 				isLoading: false
 			}));
@@ -57,12 +57,12 @@ function createMessagesStore() {
 			onMessage: (incoming) => {
 				const normalized: Message = {
 					id: incoming.id,
-					tradeId: incoming.tradeId,
-					senderId: incoming.senderId,
-					receiverId: incoming.receiverId,
+					trade_id: incoming.tradeId,
+					sender_id: incoming.senderId,
+					receiver_id: incoming.receiverId,
 					content: incoming.content,
-					isRead: incoming.isRead,
-					createdAt: incoming.createdAt ? new Date(incoming.createdAt) : new Date()
+					is_read: incoming.isRead,
+					created_at: incoming.createdAt ? incoming.createdAt : new Date().toISOString()
 				};
 				update((current) => {
 					const pendingId = Object.entries(current.pendingMessageMap).find(
@@ -79,7 +79,7 @@ function createMessagesStore() {
 						items = [...items, normalized];
 					}
 					items.sort(
-						(a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+						(a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
 					);
 					return { ...current, items };
 				});
@@ -103,7 +103,7 @@ function createMessagesStore() {
 				update((current) => ({
 					...current,
 					items: current.items.map((message) =>
-						message.id === messageId ? { ...message, isRead: true, readBy: readerId } : message
+						message.id === messageId ? { ...message, is_read: true, read_by: readerId } : message
 					)
 				}));
 			}
@@ -114,12 +114,12 @@ function createMessagesStore() {
 		const tempId = crypto.randomUUID();
 		const optimisticMessage: Message = {
 			id: tempId,
-			tradeId,
-			senderId: get(store).userId!,
-			receiverId,
+			trade_id: tradeId,
+			sender_id: get(store).userId!,
+			receiver_id: receiverId,
 			content,
-			isRead: false,
-			createdAt: new Date()
+			is_read: false,
+			created_at: new Date().toISOString()
 		};
 		update((current) => ({
 			...current,
@@ -129,9 +129,9 @@ function createMessagesStore() {
 		}));
 
 		try {
-			const saved = await messageService.createMessage(get(store).userId!, {
-				tradeId,
-				receiverId,
+			const saved = await messageService.createMessage({
+				trade_id: tradeId,
+				receiver_id: receiverId,
 				content
 			});
 			update((current) => ({
@@ -164,14 +164,14 @@ function createMessagesStore() {
 		const state = get(store);
 		if (!state.tradeId || !state.userId) return;
 		const unread = state.items.filter(
-			(message) => message.receiverId === state.userId && !message.isRead
+			(message) => message.receiver_id === state.userId && !message.is_read
 		);
 		if (!unread.length) return;
 		chatSocketManager.emitRead(unread.map((m) => m.id));
 		update((current) => ({
 			...current,
 			items: current.items.map((message) =>
-				unread.some((u) => u.id === message.id) ? { ...message, isRead: true } : message
+				unread.some((u) => u.id === message.id) ? { ...message, is_read: true } : message
 			),
 			lastSeenMessageId: unread[unread.length - 1].id
 		}));
@@ -187,7 +187,7 @@ function createMessagesStore() {
 	const lastMessageSeen = derived(store, ($state) => {
 		if (!$state.lastSeenMessageId) return null;
 		const lastMessage = $state.items.find((msg) => msg.id === $state.lastSeenMessageId);
-		return lastMessage ? lastMessage.createdAt : null;
+		return lastMessage ? lastMessage.created_at : null;
 	});
 
 	return {

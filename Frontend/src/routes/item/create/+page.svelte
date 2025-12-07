@@ -115,10 +115,42 @@
 			}
 
 			navigator.geolocation.getCurrentPosition(
-				(position) => {
+				async (position) => {
 					formData.latitude = position.coords.latitude;
 					formData.longitude = position.coords.longitude;
-					formData.location = `${position.coords.latitude.toFixed(4)}, ${position.coords.longitude.toFixed(4)}`;
+
+					// Reverse geocoding using Nominatim
+					try {
+						const response = await fetch(
+							`https://nominatim.openstreetmap.org/reverse?format=json&lat=${position.coords.latitude}&lon=${position.coords.longitude}`,
+							{
+								headers: {
+									'User-Agent': 'BarterApp/1.0'
+								}
+							}
+						);
+						if (response.ok) {
+							const data = await response.json();
+							// Construct a readable address: City, State/Province
+							const address = data.address;
+							const city = address.city || address.town || address.village || address.municipality;
+							const state = address.state || address.region || address.province;
+
+							if (city && state) {
+								formData.location = `${city}, ${state}`;
+							} else if (city) {
+								formData.location = city;
+							} else {
+								formData.location = data.display_name.split(',').slice(0, 2).join(',');
+							}
+						} else {
+							// Fallback to coordinates if API fails
+							formData.location = `${position.coords.latitude.toFixed(4)}, ${position.coords.longitude.toFixed(4)}`;
+						}
+					} catch (e) {
+						console.error('Reverse geocoding error:', e);
+						formData.location = `${position.coords.latitude.toFixed(4)}, ${position.coords.longitude.toFixed(4)}`;
+					}
 				},
 				(err) => {
 					console.error('Geolocation error:', err);
@@ -209,7 +241,8 @@
 				longitude: formData.longitude ?? undefined
 			};
 
-			await itemService.createItem(user.id, itemData);
+			const result = await itemService.createItem(itemData);
+			if (!result) throw new Error('Failed to create item');
 			goto('/my-items');
 		} catch (err: any) {
 			error = err.message || 'Failed to create item';

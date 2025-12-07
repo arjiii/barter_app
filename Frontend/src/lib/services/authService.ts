@@ -322,14 +322,21 @@ class AuthService {
     }
 
     /**
-     * Verify email using OTP
+     * Verify email using OTP (Legacy)
      */
     async verifyEmail(email: string, otp: string): Promise<{ success: boolean; message: string; token?: string; user?: User }> {
+        return this.confirmSupabaseSignup(email);
+    }
+
+    /**
+     * Confirm Supabase signup (final step after email verification)
+     */
+    async confirmSupabaseSignup(email: string): Promise<{ success: boolean; message: string; token?: string; user?: User }> {
         try {
             const res = await fetch(`${API_BASE_URL}/supabase-auth/confirm`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email, otp })
+                body: JSON.stringify({ email })
             });
             const data = await res.json();
             if (!res.ok) {
@@ -354,7 +361,7 @@ class AuthService {
 
             return { success: true, message: data.message || 'Email verified successfully' };
         } catch (e) {
-            console.error('Verify email error:', e);
+            console.error('Confirm supabase signup error:', e);
             return { success: false, message: 'Failed to verify email' };
         }
     }
