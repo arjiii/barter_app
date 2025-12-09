@@ -20,9 +20,15 @@ class Settings(BaseSettings):
 	SUPABASE_URL: str = os.getenv("SUPABASE_URL", "")
 	SUPABASE_ANON_KEY: str = os.getenv("SUPABASE_ANON_KEY", "")
 
+	# Blockchain (Sepolia) configuration
+	sepolia_rpc_url: str | None = None
+	backend_wallet_private_key: str | None = None
+	contract_address: str | None = None
+
 
 	class Config:
 		env_file = ".env"
+		extra = "allow"  # tolerate other env vars that may be present
 
 
 settings = Settings()
