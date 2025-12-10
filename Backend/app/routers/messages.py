@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, Query, BackgroundTasks, HTTPException
 from sqlalchemy.orm import Session
 from sqlalchemy import desc, or_, func
 from uuid import uuid4
-from datetime import datetime
+from datetime import datetime, timezone
 from ..database import get_db
 from .. import models, schemas
 from ..websocket_manager import trade_ws_manager
@@ -137,14 +137,13 @@ def create_message(
         trade_id=payload.trade_id,
         sender_id=current_user.id,
         receiver_id=payload.receiver_id,
-        content=payload.content,
         is_read=False,
-        created_at=datetime.utcnow(),
+        created_at=datetime.now(timezone.utc),
     )
     db.add(obj)
     
     # Update trade updated_at to surface conversation
-    trade.updated_at = func.now()
+    trade.updated_at = datetime.now(timezone.utc)
     
     db.commit()
     db.refresh(obj)
@@ -158,7 +157,8 @@ def create_message(
             "receiverId": obj.receiver_id,
             "content": obj.content,
             "isRead": obj.is_read,
-            "createdAt": obj.created_at.isoformat() if obj.created_at else datetime.utcnow().isoformat()
+            "isRead": obj.is_read,
+            "createdAt": obj.created_at.isoformat() if obj.created_at else datetime.now(timezone.utc).isoformat()
         }
     }
     background_tasks.add_task(trade_ws_manager.broadcast_message, obj.trade_id, ws_payload)

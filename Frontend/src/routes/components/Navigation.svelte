@@ -241,7 +241,10 @@
 		<!-- User Profile Section (Top) -->
 		{#if isAuthenticated && user}
 			<div class="border-b border-[color:var(--border-soft)] px-4 py-4">
-				<div class="flex items-center space-x-3 rounded-2xl bg-white/80 p-3 backdrop-blur">
+				<button
+					onclick={() => user?.id && goto(`/user/${user.id}`)}
+					class="flex w-full items-center space-x-3 rounded-2xl bg-white/80 p-3 text-left backdrop-blur transition-all hover:bg-white hover:shadow-sm"
+				>
 					<div
 						class="shadow-[color:var(--accent)]/30 flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-r from-[color:var(--accent)] to-[color:var(--accent-strong)] text-white shadow-md"
 					>
@@ -253,10 +256,10 @@
 						<p class="truncate text-sm font-semibold text-[var(--text-primary)]">{user.name}</p>
 						<div class="flex items-center space-x-1">
 							<div class="h-2 w-2 rounded-full bg-green-500"></div>
-							<p class="text-xs text-[var(--text-muted)]">Online</p>
+							<p class="text-xs text-[var(--text-muted)]">View Profile</p>
 						</div>
 					</div>
-				</div>
+				</button>
 			</div>
 		{/if}
 
@@ -366,6 +369,7 @@
 				<!-- Search button for mobile -->
 				<button
 					class="rounded-lg p-2 text-[var(--text-muted)] transition-colors hover:bg-[color:var(--surface-2)] hover:text-[var(--text-primary)] lg:hidden"
+					aria-label="Search"
 				>
 					<svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 						<path
@@ -438,5 +442,6 @@
 		role="button"
 		tabindex="0"
 		aria-label="Close sidebar"
+		onkeydown={(e) => e.key === 'Escape' && toggleSidebar()}
 	></div>
 {/if}

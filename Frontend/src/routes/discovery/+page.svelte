@@ -411,6 +411,7 @@
 				<!-- Items Grid -->
 				<div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 lg:gap-6 xl:grid-cols-4">
 					{#each filteredItems as item (item.id)}
+						{@const postedAgo = itemService.formatPostedAgo(item.created_at)}
 						<div
 							class="group cursor-pointer overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm transition-all duration-200 hover:shadow-lg"
 							role="button"
@@ -489,22 +490,24 @@
 											</svg>
 											<span>{item.category}</span>
 										</div>
-										<div class="flex items-center">
-											<svg
-												class="mr-1 h-4 w-4 text-gray-400"
-												fill="none"
-												stroke="currentColor"
-												viewBox="0 0 24 24"
-											>
-												<path
-													stroke-linecap="round"
-													stroke-linejoin="round"
-													stroke-width="2"
-													d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-												></path>
-											</svg>
-											<span>{itemService.formatPostedAgo(item.created_at)}</span>
-										</div>
+										{#if postedAgo}
+											<div class="flex items-center">
+												<svg
+													class="mr-1 h-4 w-4 text-gray-400"
+													fill="none"
+													stroke="currentColor"
+													viewBox="0 0 24 24"
+												>
+													<path
+														stroke-linecap="round"
+														stroke-linejoin="round"
+														stroke-width="2"
+														d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+													></path>
+												</svg>
+												<span>{postedAgo}</span>
+											</div>
+										{/if}
 									</div>
 								</div>
 
@@ -515,8 +518,9 @@
 											class="flex cursor-pointer items-center transition-colors hover:text-red-600 focus:outline-none"
 											onclick={(e) => {
 												e.stopPropagation();
-												if (item.owner?.id) {
-													goto(`/user/${item.owner.id}`);
+												const targetId = item.owner?.id || item.user_id;
+												if (targetId) {
+													goto(`/user/${targetId}`);
 												}
 											}}
 											aria-label={`View ${item.owner?.name || 'user'} profile`}

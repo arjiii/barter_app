@@ -6,6 +6,7 @@ from uuid import uuid4
 from ..database import get_db
 from .. import models, schemas
 from ..dependencies import get_current_user
+from datetime import datetime, timezone
 
 
 router = APIRouter(prefix="/items", tags=["items"])
@@ -36,8 +37,8 @@ def _serialize_item(item: models.Item, owner_name: str | None = None, owner_id: 
         "longitude": getattr(item, "longitude", None),
         "status": item.status,
         "views": item.views,
-        "created_at": item.created_at,
-        "updated_at": item.updated_at,
+        "created_at": item.created_at.replace(tzinfo=timezone.utc) if item.created_at and item.created_at.tzinfo is None else item.created_at,
+        "updated_at": item.updated_at.replace(tzinfo=timezone.utc) if item.updated_at and item.updated_at.tzinfo is None else item.updated_at,
     }
 
     if owner_id:
@@ -143,6 +144,8 @@ def create_item(
             latitude=payload.latitude,
             longitude=payload.longitude,
             status=payload.status or "available",
+            created_at=datetime.now(timezone.utc),
+            updated_at=datetime.now(timezone.utc)
         )
         db.add(obj)
         db.commit()
@@ -188,6 +191,7 @@ def update_item(
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized to update this item")
 
     update_data = payload.model_dump(exclude_unset=True)
+    update_data['updated_at'] = datetime.now(timezone.utc)
     for field, value in update_data.items():
         setattr(obj, field, value)
 

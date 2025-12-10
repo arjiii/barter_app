@@ -318,7 +318,7 @@ def get_recent_activity(limit: int = 10, db: Session = Depends(get_db), current_
 def get_user_reports(skip: int = 0, limit: int = 50, db: Session = Depends(get_db), current_user: models.User = Depends(require_admin)):
     """Get all user reports for admin review"""
     try:
-        reports = db.query(models.UserReport).offset(skip).limit(limit).all()
+        reports = db.query(models.UserReport).order_by(models.UserReport.created_at.desc()).offset(skip).limit(limit).all()
         results = []
         
         for report in reports:
@@ -330,8 +330,11 @@ def get_user_reports(skip: int = 0, limit: int = 50, db: Session = Depends(get_d
                 "id": report.id,
                 "reporter_id": report.reporter_id,
                 "reporter_name": reporter.name if reporter else "Unknown",
+                "reporter_email": reporter.email if reporter else "Unknown",
                 "reported_user_id": report.reported_user_id,
                 "reported_user_name": reported_user.name if reported_user else "Unknown",
+                "reported_user_email": reported_user.email if reported_user else "Unknown",
+                "reported_user_status": reported_user.status if reported_user else "unknown",
                 "reason": report.reason,
                 "description": report.description,
                 "status": report.status,

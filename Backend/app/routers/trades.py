@@ -1,9 +1,11 @@
 from fastapi import APIRouter, Depends, Query, HTTPException, status
+# Trigger reload
 from sqlalchemy.orm import Session
 from uuid import uuid4
 from ..database import get_db
 from .. import models, schemas
 from ..dependencies import get_current_user
+from datetime import datetime, timezone
 from sqlalchemy import or_
 
 router = APIRouter(prefix="/trades", tags=["trades"])
@@ -41,7 +43,13 @@ def list_trades(
             )
         )
         
-    return q.order_by(models.Trade.created_at.desc()).all()
+    trades = q.order_by(models.Trade.created_at.desc()).all()
+    for t in trades:
+        if t.created_at and t.created_at.tzinfo is None:
+            t.created_at = t.created_at.replace(tzinfo=timezone.utc)
+        if t.updated_at and t.updated_at.tzinfo is None:
+            t.updated_at = t.updated_at.replace(tzinfo=timezone.utc)
+    return trades
 
 
 @router.post("/", response_model=schemas.Trade)
@@ -74,6 +82,8 @@ def create_trade(
         meeting_location=payload.meeting_location,
         meeting_time=payload.meeting_time,
         status="pending",
+        created_at=datetime.now(timezone.utc),
+        updated_at=datetime.now(timezone.utc),
     )
     db.add(obj)
     db.commit()
@@ -96,13 +106,29 @@ def get_trade(
         if trade.from_user_id != current_user.id and trade.to_user_id != current_user.id:
             raise HTTPException(status_code=403, detail="Not authorized to view this trade")
             
+
+    
+    if trade.created_at and trade.created_at.tzinfo is None:
+        trade.created_at = trade.created_at.replace(tzinfo=timezone.utc)
+    if trade.updated_at and trade.updated_at.tzinfo is None:
+        trade.updated_at = trade.updated_at.replace(tzinfo=timezone.utc)
+            
     return trade
 
+
+from ..services.blockchain import write_trade_to_blockchain, write_rating_to_blockchain
+
+# ... imports ...
+
+from fastapi import BackgroundTasks
+
+# ... imports ...
 
 @router.patch("/{trade_id}", response_model=schemas.Trade)
 def update_trade(
     trade_id: str, 
     payload: schemas.TradeUpdate, 
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user)
 ):
@@ -126,6 +152,30 @@ def update_trade(
             trade.status = "active"
         elif new_status == "completed":
             trade.status = "completed"
+            
+            # --- Blockchain Integration: Record Trade ---
+            try:
+                # Fetch details
+                from_user = db.query(models.User).filter(models.User.id == trade.from_user_id).first()
+                to_user = db.query(models.User).filter(models.User.id == trade.to_user_id).first()
+                from_item = db.query(models.Item).filter(models.Item.id == trade.from_item_id).first()
+                to_item = db.query(models.Item).filter(models.Item.id == trade.to_item_id).first()
+                
+                item_title = f"{from_item.title} <-> {to_item.title}" if (from_item and to_item) else (from_item.title if from_item else "Unknown Item")
+                
+                if from_user and to_user:
+                    background_tasks.add_task(
+                        write_trade_to_blockchain,
+                        trade_id=trade.id,
+                        buyer_email=to_user.email,
+                        seller_email=from_user.email,
+                        item_title=item_title,
+                        amount=0
+                    )
+            except Exception as e:
+                print(f"Failed to queue trade for blockchain: {e}")
+            # ---------------------------------------------
+
         else:
             trade.status = new_status
 
@@ -137,7 +187,7 @@ def update_trade(
                 db.execute(update(models.Item).where(models.Item.id == trade.from_item_id).values(status="pending"))
             if trade.to_item_id:
                 db.execute(update(models.Item).where(models.Item.id == trade.to_item_id).values(status="pending"))
-
+ 
         if trade.status == "completed":
             # Mark items as traded
             from sqlalchemy import update
@@ -147,7 +197,6 @@ def update_trade(
                 db.execute(update(models.Item).where(models.Item.id == trade.to_item_id).values(status="traded"))
                 
         # Remove status from generic update loop to avoid double set if we modified it above
-        # (Though strictly speaking, setting it again is harmless, but let's be precise)
         if "status" in update_data:
             del update_data["status"]
 
@@ -184,6 +233,7 @@ def delete_trade(
 def create_rating(
     trade_id: str, 
     payload: dict, # TODO: Create RatingCreate schema for strict 1-to-1
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user)
 ):
@@ -201,11 +251,27 @@ def create_rating(
         from_user_id=current_user.id, # Force rater to be current user
         to_user_id=payload["ratee_user_id"],
         rating=int(payload["score"]),
+
         comment=payload.get("feedback"),
+        created_at=datetime.now(timezone.utc),
     )
     db.add(rating)
     db.commit()
     db.refresh(rating)
+    
+    # --- Blockchain Integration: Record Rating ---
+    try:
+        ratee = db.query(models.User).filter(models.User.id == rating.to_user_id).first()
+        if ratee:
+            background_tasks.add_task(
+                write_rating_to_blockchain,
+                user_email=ratee.email,
+                rating=rating.rating,
+                comment=rating.comment or ""
+            )
+    except Exception as e:
+        print(f"Failed to queue rating for blockchain: {e}")
+    # ---------------------------------------------
     
     return {
         "id": rating.id,

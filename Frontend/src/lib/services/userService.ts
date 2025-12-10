@@ -21,6 +21,29 @@ class UserService {
       return null;
     }
   }
+
+  async reportUser(reportedUserId: string, reason: string, description: string): Promise<void> {
+    const token = localStorage.getItem('bayanihan_token');
+    if (!token) throw new Error('You must be logged in to report a user');
+
+    const res = await fetch(`${API_BASE_URL}/reports/user`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`
+      },
+      body: JSON.stringify({
+        reported_user_id: reportedUserId,
+        reason,
+        description
+      })
+    });
+
+    if (!res.ok) {
+      const error = await res.json();
+      throw new Error(error.detail || 'Failed to report user');
+    }
+  }
 }
 
 export const userService = new UserService();

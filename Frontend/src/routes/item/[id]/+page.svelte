@@ -385,12 +385,16 @@
 						<div
 							class="flex cursor-pointer items-center space-x-4 rounded-lg p-2 transition-colors hover:bg-gray-50"
 							onclick={() => {
-								if (item?.owner?.id) goto(`/user/${item.owner.id}`);
+								const targetId = item?.owner?.id || item?.user_id;
+								if (targetId) goto(`/user/${targetId}`);
 							}}
 							onkeydown={(e) => {
-								if ((e.key === 'Enter' || e.key === ' ') && item?.owner?.id) {
-									e.preventDefault();
-									goto(`/user/${item.owner.id}`);
+								if (e.key === 'Enter' || e.key === ' ') {
+									const targetId = item?.owner?.id || item?.user_id;
+									if (targetId) {
+										e.preventDefault();
+										goto(`/user/${targetId}`);
+									}
 								}
 							}}
 							role="button"

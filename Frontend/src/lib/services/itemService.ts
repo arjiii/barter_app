@@ -105,9 +105,17 @@ class ItemService {
 	}
 
 	formatPostedAgo(dateString: string): string {
+		if (!dateString) return '';
 		const date = new Date(dateString);
+		// Check if date is invalid or epoch (1970) which happens with null/0
+		if (isNaN(date.getTime()) || date.getFullYear() < 2020) return '';
+
 		const now = new Date();
 		const diffMs = now.getTime() - date.getTime();
+
+		// If future date (clock skew), treat as just now
+		if (diffMs < 0) return 'Just now';
+
 		const diffMins = Math.floor(diffMs / 60000);
 		const diffHours = Math.floor(diffMs / 3600000);
 		const diffDays = Math.floor(diffMs / 86400000);

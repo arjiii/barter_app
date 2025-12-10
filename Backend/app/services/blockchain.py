@@ -5,27 +5,169 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-# Configuration
-RPC_URL = os.getenv("BLOCKCHAIN_RPC_URL")
-CONTRACT_ADDRESS = os.getenv("BLOCKCHAIN_CONTRACT_ADDRESS")
-PRIVATE_KEY = os.getenv("BLOCKCHAIN_PRIVATE_KEY")
+from ..config import settings
 
-# Minimal ABI for the write function - You might need to expand this based on your actual contract
-# Assuming a function like: completeTrade(string tradeId, string buyerEmail, string sellerEmail, string item, string price)
+# New Wallet Generated:
+# Address: 0xC1373B50591d8E0235c77173857e57FC51f1B4A9
+# Private Key: 0x50f5c887a832d3f1c74b15e4a30f40e4d95b63d3fd8663f9154784a329d89204
+
+# Configuration
+RPC_URL = settings.sepolia_rpc_url or os.getenv("SEPOLIA_RPC_URL") or os.getenv("BLOCKCHAIN_RPC_URL")
+CONTRACT_ADDRESS = settings.contract_address or os.getenv("CONTRACT_ADDRESS") or os.getenv("BLOCKCHAIN_CONTRACT_ADDRESS")
+# Ensure PRIVATE_KEY is loaded correctly. If using the generated key, ensure it's in .env or hardcoded for testing (not recommended for prod).
+PRIVATE_KEY = settings.backend_wallet_private_key or os.getenv("backend_WALLET_PRIVATE_KEY") or os.getenv("BLOCKCHAIN_PRIVATE_KEY")
+
+# ABI from Smart Contract
+# ABI from Smart Contract
 CONTRACT_ABI = [
     {
+        "inputs": [],
+        "stateMutability": "nonpayable",
+        "type": "constructor",
+    },
+    {
+        "anonymous": False,
         "inputs": [
-            {"internalType": "string", "name": "tradeId", "type": "string"},
-            {"internalType": "string", "name": "buyerEmail", "type": "string"},
-            {"internalType": "string", "name": "sellerEmail", "type": "string"},
-            {"internalType": "string", "name": "item", "type": "string"},
-            {"internalType": "string", "name": "price", "type": "string"}
+            {
+                "indexed": True,
+                "internalType": "string",
+                "name": "ratedUserEmail",
+                "type": "string",
+            },
+            {
+                "indexed": False,
+                "internalType": "uint8",
+                "name": "rating",
+                "type": "uint8",
+            },
+            {
+                "indexed": False,
+                "internalType": "string",
+                "name": "comment",
+                "type": "string",
+            },
+            {
+                "indexed": False,
+                "internalType": "uint256",
+                "name": "timestamp",
+                "type": "uint256",
+            },
         ],
-        "name": "completeTrade",
+        "name": "RatingRecorded",
+        "type": "event",
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "string",
+                "name": "_userEmail",
+                "type": "string",
+            },
+            {
+                "internalType": "uint8",
+                "name": "_rating",
+                "type": "uint8",
+            },
+            {
+                "internalType": "string",
+                "name": "_comment",
+                "type": "string",
+            },
+        ],
+        "name": "recordRating",
         "outputs": [],
         "stateMutability": "nonpayable",
-        "type": "function"
-    }
+        "type": "function",
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "string",
+                "name": "_tradeId",
+                "type": "string",
+            },
+            {
+                "internalType": "string",
+                "name": "_buyer",
+                "type": "string",
+            },
+            {
+                "internalType": "string",
+                "name": "_seller",
+                "type": "string",
+            },
+            {
+                "internalType": "string",
+                "name": "_item",
+                "type": "string",
+            },
+            {
+                "internalType": "uint256",
+                "name": "_amount",
+                "type": "uint256",
+            },
+        ],
+        "name": "recordTrade",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function",
+    },
+    {
+        "anonymous": False,
+        "inputs": [
+            {
+                "indexed": True,
+                "internalType": "string",
+                "name": "tradeId",
+                "type": "string",
+            },
+            {
+                "indexed": False,
+                "internalType": "string",
+                "name": "buyerEmail",
+                "type": "string",
+            },
+            {
+                "indexed": False,
+                "internalType": "string",
+                "name": "sellerEmail",
+                "type": "string",
+            },
+            {
+                "indexed": False,
+                "internalType": "string",
+                "name": "item",
+                "type": "string",
+            },
+            {
+                "indexed": False,
+                "internalType": "uint256",
+                "name": "amount",
+                "type": "uint256",
+            },
+            {
+                "indexed": False,
+                "internalType": "uint256",
+                "name": "timestamp",
+                "type": "uint256",
+            },
+        ],
+        "name": "TradeRecorded",
+        "type": "event",
+    },
+    {
+        "inputs": [],
+        "name": "owner",
+        "outputs": [
+            {
+                "internalType": "address",
+                "name": "",
+                "type": "address",
+            },
+        ],
+        "stateMutability": "view",
+        "type": "function",
+    },
 ]
 
 def get_web3_provider():
@@ -33,10 +175,59 @@ def get_web3_provider():
         return None
     return Web3(Web3.HTTPProvider(RPC_URL))
 
-def write_trade_to_blockchain(trade_id: str, buyer_email: str, seller_email: str, item_title: str, price: str = "0"):
+def write_trade_to_blockchain(trade_id: str, buyer_email: str, seller_email: str, item_title: str, amount: int = 0):
     """
     Writes trade details to the blockchain.
     Returns the transaction hash as a hex string.
+    """
+    if not all([RPC_URL, CONTRACT_ADDRESS, PRIVATE_KEY]):
+        print("Blockchain configuration missing. Skipping blockchain write.")
+        return None
+
+    w3 = get_web3_provider()
+    if not w3 or not w3.is_connected():
+        print("Failed to connect to blockchain network.")
+        return None
+
+    try:
+        # Initialize contract
+        contract = w3.eth.contract(address=CONTRACT_ADDRESS, abi=CONTRACT_ABI)
+        
+        # Build transaction
+        account = w3.eth.account.from_key(PRIVATE_KEY)
+        nonce = w3.eth.get_transaction_count(account.address, 'pending')
+        
+        # Call recordTrade
+        tx = contract.functions.recordTrade(
+            trade_id,
+            buyer_email,
+            seller_email,
+            item_title,
+            int(amount)
+        ).build_transaction({
+            'chainId': w3.eth.chain_id, 
+            'gas': 2000000, 
+            'gasPrice': w3.eth.gas_price,
+            'nonce': nonce,
+        })
+
+        # Sign transaction
+        signed_tx = w3.eth.account.sign_transaction(tx, PRIVATE_KEY)
+
+        # Send transaction
+        tx_hash = w3.eth.send_raw_transaction(signed_tx.rawTransaction)
+        
+        hex_hash = w3.to_hex(tx_hash)
+        print(f"Trade written to blockchain: {hex_hash}")
+        return hex_hash
+
+    except Exception as e:
+        print(f"Blockchain Error/Trade: {e}")
+        return None
+
+def write_rating_to_blockchain(user_email: str, rating: int, comment: str):
+    """
+    Writes rating to the blockchain.
     """
     if not all([RPC_URL, CONTRACT_ADDRESS, PRIVATE_KEY]):
         print("Blockchain configuration missing. Skipping blockchain write.")
@@ -55,19 +246,16 @@ def write_trade_to_blockchain(trade_id: str, buyer_email: str, seller_email: str
         
         # Build transaction
         account = w3.eth.account.from_key(PRIVATE_KEY)
-        nonce = w3.eth.get_transaction_count(account.address)
+        nonce = w3.eth.get_transaction_count(account.address, 'pending')
         
-        # Prepare transaction data
-        # Note: 'price' in your screenshot was passed. Assuming it's a string or can be converted.
-        tx = contract.functions.completeTrade(
-            trade_id,
-            buyer_email,
-            seller_email,
-            item_title,
-            str(price)
+        # Call recordRating
+        tx = contract.functions.recordRating(
+            user_email,
+            int(rating),
+            comment
         ).build_transaction({
-            'chainId': w3.eth.chain_id,  # Or hardcode if specific
-            'gas': 2000000, # Adjust as needed
+            'chainId': w3.eth.chain_id, 
+            'gas': 2000000, 
             'gasPrice': w3.eth.gas_price,
             'nonce': nonce,
         })
@@ -78,16 +266,10 @@ def write_trade_to_blockchain(trade_id: str, buyer_email: str, seller_email: str
         # Send transaction
         tx_hash = w3.eth.send_raw_transaction(signed_tx.rawTransaction)
         
-        # Wait for receipt? The prompt said "Fire and Forget or Wait". 
-        # "10-15 seconds. You might want to run this in the background... OR show spinner".
-        # Since we are in an async function in FastAPI, awaiting this might block the request if we wait for receipt.
-        # But `send_raw_transaction` returns hash immediately. 
-        # Waiting for receipt `w3.eth.wait_for_transaction_receipt(tx_hash)` takes time.
-        # The user's code `await writeTradeToBlockchain` suggests they might want to wait or at least get the hash.
-        # Returning the hash immediately is best for "Fire and Forget" style where user gets hash.
-        
-        return w3.to_hex(tx_hash)
+        hex_hash = w3.to_hex(tx_hash)
+        print(f"Rating written to blockchain: {hex_hash}")
+        return hex_hash
 
     except Exception as e:
-        print(f"Blockchain Error: {e}")
+        print(f"Blockchain Error/Rating: {e}")
         return None
