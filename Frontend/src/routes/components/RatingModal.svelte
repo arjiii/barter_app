@@ -38,7 +38,7 @@
 		error = null;
 
 		try {
-			const ok = await tradeService.rateTrade(tradeId, raterUserId, rateeUserId, score, feedback.trim() || undefined);
+			const ok = await tradeService.rateTrade(tradeId, rateeUserId, score, feedback.trim() || undefined);
 			
 			if (ok) {
 				success = true;

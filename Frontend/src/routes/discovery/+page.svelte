@@ -140,7 +140,7 @@
 
 			// Load items and categories in parallel
 			const [itemsResult, categoriesResult] = await Promise.all([
-				itemService.getItems(),
+				itemService.getItems({ status: 'available' }),
 				itemService.getCategories()
 			]);
 
