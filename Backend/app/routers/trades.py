@@ -333,13 +333,9 @@ def create_rating(
         "ratee_user_id": rating.to_user_id,
         "score": rating.rating,
         "feedback": rating.comment,
-<<<<<<< HEAD
         "blockchain_tx_hash": rating.blockchain_tx_hash,
         "created_at": rating.created_at
-=======
-        "created_at": rating.created_at,
-        "transaction_hash": rating.blockchain_tx_hash
->>>>>>> 060e6f8d88871d08f0432cf1eeac468f1606cc65
+
     }
 
 
@@ -355,7 +351,7 @@ def list_ratings(trade_id: str, db: Session = Depends(get_db)):
             "score": r.rating,
             "feedback": r.comment,
             "created_at": r.created_at,
-            "transaction_hash": r.blockchain_tx_hash
+            "blockchain_tx_hash": r.blockchain_tx_hash
         }
         for r in ratings
     ]
@@ -374,7 +370,7 @@ def get_user_ratings(user_id: str, db: Session = Depends(get_db)):
             "score": r.rating,
             "feedback": r.comment,
             "created_at": r.created_at,
-            "transaction_hash": r.blockchain_tx_hash
+            "blockchain_tx_hash": r.blockchain_tx_hash
         }
         for r in ratings
     ]
