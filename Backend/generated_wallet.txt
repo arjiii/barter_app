@@ -1,0 +1,7 @@
+Address: 0x6A26824701B0b6E0d7D15a65d8649248c2602f6a
+Private Key: 0xe542fe63a258532eb98de29e523b2bfad9135b519f949ce237c0f1b2bd189a6
+
+IMPORTANT:
+1. This is the Wallet currently configured in your local .env.
+2. Use this Private Key in your Railway variables for 'backend_WALLET_PRIVATE_KEY'.
+3. You MUST fund this Address (0x6A26...) with Sepolia ETH.

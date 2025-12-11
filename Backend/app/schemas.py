@@ -78,6 +78,7 @@ class Trade(TradeBase):
 	expires_at: Optional[datetime] = None
 	created_at: Optional[datetime] = None
 	updated_at: Optional[datetime] = None
+	blockchain_tx_hash: Optional[str] = None
 
 	class Config:
 		from_attributes = True
@@ -108,6 +109,7 @@ class Rating(BaseModel):
     ratee_user_id: str
     score: int
     feedback: Optional[str] = None
+    blockchain_tx_hash: Optional[str] = None
     created_at: Optional[datetime] = None
 
     class Config:

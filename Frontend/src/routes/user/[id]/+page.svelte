@@ -113,7 +113,7 @@
 			userTrades = allTrades
 				.filter(
 					(trade) =>
-						(trade.fromUserId === userId || trade.toUserId === userId) &&
+						(trade.from_user_id === userId || trade.to_user_id === userId) &&
 						trade.status === 'completed'
 				)
 				.slice(0, 10);
@@ -160,8 +160,8 @@
 			const trades = await tradeService.getTrades({ userId: currentUser.id });
 			const existingTrade = trades.find(
 				(trade) =>
-					(trade.fromUserId === currentUser.id && trade.toUserId === profileUser.id) ||
-					(trade.toUserId === currentUser.id && trade.fromUserId === profileUser.id)
+					(trade.from_user_id === currentUser?.id && trade.to_user_id === profileUser?.id) ||
+					(trade.to_user_id === currentUser?.id && trade.from_user_id === profileUser?.id)
 			);
 
 			if (existingTrade) {
@@ -176,18 +176,18 @@
 			}
 
 			const quickMessage = `Hi ${profileUser.name || 'there'}! I'd love to connect.`;
-			const createdTrade = await tradeService.createTrade(currentUser.id, {
-				toUserId: profileUser.id,
-				fromItemId: anchorItemId,
-				toItemId: anchorItemId,
+			const createdTrade = await tradeService.createTrade({
+				to_user_id: profileUser.id,
+				from_item_id: anchorItemId,
+				to_item_id: anchorItemId,
 				message: quickMessage
 			});
 
 			if (createdTrade) {
 				try {
-					await messageService.createMessage(currentUser.id, {
-						tradeId: createdTrade.id,
-						receiverId: profileUser.id,
+					await messageService.createMessage({
+						trade_id: createdTrade.id,
+						receiver_id: profileUser.id,
 						content: quickMessage
 					});
 				} catch (err) {
@@ -444,6 +444,28 @@
 									</p>
 								</div>
 							{/if}
+							{#if rating.blockchain_tx_hash}
+								<div class="mt-2 pl-16 text-xs text-gray-400">
+									<a
+										href={`https://sepolia.etherscan.io/tx/${rating.blockchain_tx_hash}`}
+										target="_blank"
+										rel="noopener noreferrer"
+										class="flex items-center gap-1 hover:text-red-500 hover:underline"
+									>
+										<svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+											><path
+												stroke-linecap="round"
+												stroke-linejoin="round"
+												stroke-width="2"
+												d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"
+											></path></svg
+										>
+										Blockchain Verified: {rating.blockchain_tx_hash.slice(0, 10)}...{rating.blockchain_tx_hash.slice(
+											-8
+										)}
+									</a>
+								</div>
+							{/if}
 						</div>
 					{/each}
 				</div>
@@ -529,6 +551,32 @@
 									<p class="mt-1 text-xs text-gray-500">
 										Completed on {new Date(trade.created_at || Date.now()).toLocaleDateString()}
 									</p>
+									{#if trade.blockchain_tx_hash}
+										<div class="mt-1 text-xs text-gray-400">
+											<a
+												href={`https://sepolia.etherscan.io/tx/${trade.blockchain_tx_hash}`}
+												target="_blank"
+												rel="noopener noreferrer"
+												class="flex items-center gap-1 hover:text-red-500 hover:underline"
+											>
+												<svg
+													class="h-3 w-3"
+													fill="none"
+													stroke="currentColor"
+													viewBox="0 0 24 24"
+													><path
+														stroke-linecap="round"
+														stroke-linejoin="round"
+														stroke-width="2"
+														d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"
+													></path></svg
+												>
+												Blockchain Verified: {trade.blockchain_tx_hash.slice(0, 10)}...{trade.blockchain_tx_hash.slice(
+													-8
+												)}
+											</a>
+										</div>
+									{/if}
 								</div>
 								<span
 									class="rounded-full bg-green-100 px-3 py-1 text-xs font-semibold text-green-800"

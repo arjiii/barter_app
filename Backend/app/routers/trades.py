@@ -315,6 +315,7 @@ def create_rating(
         "ratee_user_id": rating.to_user_id,
         "score": rating.rating,
         "feedback": rating.comment,
+        "blockchain_tx_hash": rating.blockchain_tx_hash,
         "created_at": rating.created_at
     }
 
