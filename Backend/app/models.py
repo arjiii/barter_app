@@ -95,6 +95,7 @@ class Trade(Base):
 	expires_at = Column(DateTime)
 	meeting_location = Column(String(255))
 	meeting_time = Column(DateTime)
+	blockchain_tx_hash = Column(String(255), nullable=True)
 	created_at = Column(DateTime, server_default=func.now())
 	updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
 
@@ -126,6 +127,7 @@ class Rating(Base):
     to_user_id = Column(String(36), ForeignKey('users.id', ondelete='CASCADE'), nullable=False)  # ratee
     rating = Column(Integer, nullable=False)  # score (1-5)
     comment = Column(Text)  # feedback
+    blockchain_tx_hash = Column(String(255), nullable=True)
     created_at = Column(DateTime, server_default=func.now())
 
 

@@ -117,6 +117,41 @@ def get_trade(
 
 
 from ..services.blockchain import write_trade_to_blockchain, write_rating_to_blockchain
+from ..database import SessionLocal
+
+def record_trade_bg(trade_id: str, buyer_email: str, seller_email: str, item_title: str):
+    try:
+        tx_hash = write_trade_to_blockchain(trade_id, buyer_email, seller_email, item_title, 0)
+        print(f"Trade recorded on blockchain. Hash: {tx_hash}")
+        
+        # Update DB with hash
+        db = SessionLocal()
+        try:
+            trade = db.query(models.Trade).filter(models.Trade.id == trade_id).first()
+            if trade:
+                trade.blockchain_tx_hash = tx_hash
+                db.commit()
+        finally:
+            db.close()
+    except Exception as e:
+        print(f"Error in background trade record: {e}")
+
+def record_rating_bg(rating_id: str, user_email: str, rating_val: int, comment: str):
+    try:
+        tx_hash = write_rating_to_blockchain(user_email, rating_val, comment)
+        print(f"Rating recorded on blockchain. Hash: {tx_hash}")
+        
+        # Update DB with hash
+        db = SessionLocal()
+        try:
+            rating_obj = db.query(models.Rating).filter(models.Rating.id == rating_id).first()
+            if rating_obj:
+                rating_obj.blockchain_tx_hash = tx_hash
+                db.commit()
+        finally:
+            db.close()
+    except Exception as e:
+        print(f"Error in background rating record: {e}")
 
 # ... imports ...
 
@@ -165,12 +200,11 @@ def update_trade(
                 
                 if from_user and to_user:
                     background_tasks.add_task(
-                        write_trade_to_blockchain,
+                        record_trade_bg,
                         trade_id=trade.id,
                         buyer_email=to_user.email,
                         seller_email=from_user.email,
-                        item_title=item_title,
-                        amount=0
+                        item_title=item_title
                     )
             except Exception as e:
                 print(f"Failed to queue trade for blockchain: {e}")
@@ -264,9 +298,10 @@ def create_rating(
         ratee = db.query(models.User).filter(models.User.id == rating.to_user_id).first()
         if ratee:
             background_tasks.add_task(
-                write_rating_to_blockchain,
+                record_rating_bg,
+                rating_id=rating.id,
                 user_email=ratee.email,
-                rating=rating.rating,
+                rating_val=rating.rating,
                 comment=rating.comment or ""
             )
     except Exception as e:
