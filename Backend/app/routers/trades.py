@@ -137,21 +137,39 @@ def record_trade_bg(trade_id: str, buyer_email: str, seller_email: str, item_tit
         print(f"Error in background trade record: {e}")
 
 def record_rating_bg(rating_id: str, user_email: str, rating_val: int, comment: str):
+    """Background task to record rating on blockchain and save tx hash to DB"""
+    db = None
     try:
         tx_hash = write_rating_to_blockchain(user_email, rating_val, comment)
-        print(f"Rating recorded on blockchain. Hash: {tx_hash}")
+        
+        if not tx_hash:
+            print(f"Warning: No transaction hash returned for rating {rating_id}")
+            return
+        
+        print(f"Rating {rating_id} recorded on blockchain. Hash: {tx_hash}")
         
         # Update DB with hash
         db = SessionLocal()
-        try:
-            rating_obj = db.query(models.Rating).filter(models.Rating.id == rating_id).first()
-            if rating_obj:
-                rating_obj.blockchain_tx_hash = tx_hash
-                db.commit()
-        finally:
-            db.close()
+        rating_obj = db.query(models.Rating).filter(models.Rating.id == rating_id).first()
+        
+        if not rating_obj:
+            print(f"Error: Rating {rating_id} not found in database")
+            return
+            
+        rating_obj.blockchain_tx_hash = tx_hash
+        db.commit()
+        db.refresh(rating_obj)
+        print(f"Successfully saved transaction hash {tx_hash} for rating {rating_id}")
+        
     except Exception as e:
-        print(f"Error in background rating record: {e}")
+        import traceback
+        error_msg = f"Error in background rating record for {rating_id}: {str(e)}\n{traceback.format_exc()}"
+        print(error_msg)
+        if db:
+            db.rollback()
+    finally:
+        if db:
+            db.close()
 
 # ... imports ...
 
@@ -315,7 +333,8 @@ def create_rating(
         "ratee_user_id": rating.to_user_id,
         "score": rating.rating,
         "feedback": rating.comment,
-        "created_at": rating.created_at
+        "created_at": rating.created_at,
+        "transaction_hash": rating.blockchain_tx_hash
     }
 
 
@@ -330,7 +349,8 @@ def list_ratings(trade_id: str, db: Session = Depends(get_db)):
             "ratee_user_id": r.to_user_id,
             "score": r.rating,
             "feedback": r.comment,
-            "created_at": r.created_at
+            "created_at": r.created_at,
+            "transaction_hash": r.blockchain_tx_hash
         }
         for r in ratings
     ]
@@ -348,7 +368,8 @@ def get_user_ratings(user_id: str, db: Session = Depends(get_db)):
             "ratee_user_id": r.to_user_id,
             "score": r.rating,
             "feedback": r.comment,
-            "created_at": r.created_at
+            "created_at": r.created_at,
+            "transaction_hash": r.blockchain_tx_hash
         }
         for r in ratings
     ]

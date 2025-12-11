@@ -100,6 +100,7 @@ CREATE TABLE IF NOT EXISTS user_ratings (
 	trade_id CHAR(36) NOT NULL,
 	rating TINYINT NOT NULL CHECK (rating >= 1 AND rating <= 5),
 	comment TEXT NULL,
+	blockchain_tx_hash VARCHAR(255) NULL,
 	created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
 	CONSTRAINT fk_ratings_from_user FOREIGN KEY (from_user_id) REFERENCES users(id) ON DELETE CASCADE,
 	CONSTRAINT fk_ratings_to_user FOREIGN KEY (to_user_id) REFERENCES users(id) ON DELETE CASCADE,

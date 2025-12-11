@@ -109,6 +109,7 @@ class Rating(BaseModel):
     score: int
     feedback: Optional[str] = None
     created_at: Optional[datetime] = None
+    transaction_hash: Optional[str] = None
 
     class Config:
         from_attributes = True
