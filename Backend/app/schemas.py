@@ -111,6 +111,7 @@ class Rating(BaseModel):
     feedback: Optional[str] = None
     blockchain_tx_hash: Optional[str] = None
     created_at: Optional[datetime] = None
+    transaction_hash: Optional[str] = None
 
     class Config:
         from_attributes = True
