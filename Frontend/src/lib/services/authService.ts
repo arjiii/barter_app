@@ -325,7 +325,38 @@ class AuthService {
      * Verify email using OTP (Legacy)
      */
     async verifyEmail(email: string, otp: string): Promise<{ success: boolean; message: string; token?: string; user?: User }> {
-        return this.confirmSupabaseSignup(email);
+        try {
+            const res = await fetch(`${API_BASE_URL}/supabase-auth/verify-otp`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email, otp })
+            });
+            const data = await res.json();
+            if (!res.ok) {
+                return { success: false, message: data.detail || data.message || 'Verification failed' };
+            }
+
+            if (data.token && data.user) {
+                localStorage.setItem('bayanihan_token', data.token);
+                const user = {
+                    id: data.user.id,
+                    email: data.user.email,
+                    name: data.user.name,
+                    isVerified: true,
+                    role: data.user.role || 'user',
+                    createdAt: new Date(),
+                    location: data.user.location || undefined,
+                    latitude: data.user.latitude,
+                    longitude: data.user.longitude
+                };
+                return { success: true, message: data.message || 'Email verified successfully', token: data.token, user };
+            }
+
+            return { success: true, message: data.message || 'Email verified successfully' };
+        } catch (e) {
+            console.error('Verify OTP error:', e);
+            return { success: false, message: 'Failed to verify email' };
+        }
     }
 
     /**

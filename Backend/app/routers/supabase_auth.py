@@ -49,38 +49,61 @@ async def supabase_signup(payload: dict, db: Session = Depends(get_db)):
 			db.delete(old_pending)
 			db.commit()
 		
-		# Create Supabase user
-		supabase = get_supabase_client()
-		auth_response = supabase.auth.sign_up({
-			"email": email,
-			"password": password,
-			"options": {
-				"data": {"name": name},
-				"email_redirect_to": f"{settings.FRONTEND_URL}/auth/callback"
-			}
-		})
-		
-		if not auth_response.user:
-			raise HTTPException(
-				status_code=500,
-				detail="Failed to create authentication account"
-			)
+		verification_method = payload.get("verification_method", "email")
+
+		# Create Supabase user ONLY if email verification is chosen
+		supabase_id = None
+		if verification_method == "email":
+			supabase = get_supabase_client()
+			auth_response = supabase.auth.sign_up({
+				"email": email,
+				"password": password,
+				"options": {
+					"data": {"name": name},
+					"email_redirect_to": f"{settings.FRONTEND_URL}/auth/callback"
+				}
+			})
+			
+			if not auth_response.user:
+				raise HTTPException(
+					status_code=500,
+					detail="Failed to create authentication account"
+				)
+			supabase_id = auth_response.user.id
 		
 		# Store in pending_signups
 		pending = models.PendingSignup(
 			id=str(uuid4()),
-			supabase_user_id=auth_response.user.id,
+			supabase_user_id=supabase_id,
 			name=name,
 			email=email,
-			password_hash="SUPABASE_AUTH", # Placeholder as Supabase handles auth
+			password_hash="SUPABASE_AUTH" if verification_method == "email" else password, # Store password for admin flow (unsafe? ideally hash it)
 			location=payload.get("location"),
 			latitude=payload.get("latitude"),
 			longitude=payload.get("longitude"),
+			verification_method=verification_method,
 			expires_at=datetime.utcnow() + timedelta(hours=24)
 		)
+
+		# If admin verification, we might want to hash the password locally so we can create the user later
+		if verification_method == "admin":
+			# Import hash function if needed, or store temporarily. 
+			# NOTE: Storing plain password is bad practice. We should hash it or let admin trigger a password reset email on approval.
+			# For now, let's just use a placeholder and require password set on approval, OR hash it.
+			# Better: Hash it now, verify later.
+			from ..security import hash_password
+			pending.password_hash = hash_password(password)
 		
 		db.add(pending)
 		db.commit()
+		
+		if verification_method == "admin":
+			print(f"✓ Registration pending admin approval: {email}")
+			return {
+				"success": True,
+				"message": "Registration request submitted! Please wait for admin approval.",
+				"email": email
+			}
 		
 		print(f"✓ Supabase user created: {email}")
 		print(f"✓ Verification email sent automatically by Supabase")
@@ -199,6 +222,94 @@ async def confirm_email(payload: dict, db: Session = Depends(get_db)):
 		raise
 	except Exception as e:
 		print(f"Confirm error: {str(e)}")
+		raise HTTPException(status_code=500, detail=str(e))
+
+
+
+@router.post("/verify-otp")
+async def verify_otp(payload: dict, db: Session = Depends(get_db)):
+	"""
+	Verify email using OTP code and create account
+	"""
+	try:
+		email = payload.get("email", "").strip().lower()
+		otp = payload.get("otp", "").strip()
+		
+		if not email or not otp:
+			raise HTTPException(status_code=400, detail="Email and OTP are required")
+		
+		# Get pending signup
+		pending = db.query(models.PendingSignup).filter(
+			models.PendingSignup.email == email
+		).first()
+		
+		if not pending:
+			# Check if user already exists
+			existing = db.query(models.User).filter(models.User.email == email).first()
+			if existing:
+				return {
+					"success": True,
+					"message": "Email already verified",
+					"user": {
+						"id": existing.id,
+						"name": existing.name,
+						"email": existing.email
+					},
+					"token": create_access_token(existing.id)
+				}
+			raise HTTPException(status_code=404, detail="No pending signup found")
+
+		# Verify OTP with Supabase
+		supabase = get_supabase_client()
+		try:
+			res = supabase.auth.verify_otp({
+				"email": email,
+				"token": otp,
+				"type": "signup"
+			})
+			if not res.user:
+				raise Exception("Invalid OTP")
+		except Exception as e:
+			print(f"OTP Verification failed: {e}")
+			raise HTTPException(status_code=400, detail="Invalid verification code")
+
+		# Create actual user account
+		user = models.User(
+			id=str(uuid4()),
+			supabase_user_id=pending.supabase_user_id,
+			name=pending.name,
+			email=pending.email,
+			password_hash="",  # Managed by Supabase
+			role='user',
+			is_verified=True,
+			location=pending.location,
+			latitude=pending.latitude,
+			longitude=pending.longitude
+		)
+		
+		db.add(user)
+		db.delete(pending)
+		db.commit()
+		
+		token = create_access_token(user.id)
+		
+		return {
+			"success": True,
+			"message": "Email verified successfully!",
+			"user": {
+				"id": user.id,
+				"name": user.name,
+				"email": user.email,
+				"role": user.role,
+				"location": user.location
+			},
+			"token": token
+		}
+
+	except HTTPException:
+		raise
+	except Exception as e:
+		print(f"Verify OTP error: {str(e)}")
 		raise HTTPException(status_code=500, detail=str(e))
 
 
