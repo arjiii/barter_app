@@ -18,12 +18,12 @@
     <p class="comment">"{commentText}"</p>
   {/if}
 
-  {#if review.transaction_hash}
+  {#if review.blockchain_tx_hash}
     <div class="verification">
       <span class="icon">🔗</span>
       <span class="text">Verified Immutable</span>
       <a
-        href={`https://sepolia.etherscan.io/tx/${review.transaction_hash}`}
+        href={`https://sepolia.etherscan.io/tx/${review.blockchain_tx_hash}`}
         target="_blank"
         rel="noopener noreferrer"
         class="etherscan-link"
